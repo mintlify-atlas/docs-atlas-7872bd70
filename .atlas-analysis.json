@@ -1,0 +1,141 @@
+{
+  "projectType": "saas",
+  "projectName": "Bruno",
+  "projectDescription": "Opensource IDE for exploring and testing APIs - a lightweight alternative to Postman and Insomnia",
+  "theme": "palm",
+  "primaryColor": "#8E44AD",
+  "lightColor": "#E8DAEF",
+  "darkColor": "#6C3483",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/collections",
+              "concepts/bru-language",
+              "concepts/environments",
+              "concepts/git-integration"
+            ]
+          },
+          {
+            "group": "Desktop App",
+            "pages": [
+              "desktop/overview",
+              "desktop/creating-requests",
+              "desktop/request-types",
+              "desktop/authentication",
+              "desktop/scripts",
+              "desktop/tests",
+              "desktop/collection-settings"
+            ]
+          },
+          {
+            "group": "CLI",
+            "pages": [
+              "cli/overview",
+              "cli/installation",
+              "cli/running-tests",
+              "cli/importing-collections",
+              "cli/options"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/scripting",
+              "advanced/variables",
+              "advanced/assertions",
+              "advanced/workflows"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/ci-cd",
+              "integrations/version-control",
+              "integrations/openapi"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Bru Language",
+            "pages": [
+              "api/bru-syntax",
+              "api/request-format",
+              "api/collection-format"
+            ]
+          },
+          {
+            "group": "Scripting API",
+            "pages": [
+              "api/scripting/overview",
+              "api/scripting/pre-request",
+              "api/scripting/post-response",
+              "api/scripting/test-api"
+            ]
+          },
+          {
+            "group": "CLI Reference",
+            "pages": [
+              "api/cli/run",
+              "api/cli/import"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Contributing",
+        "groups": [
+          {
+            "group": "Development",
+            "pages": [
+              "contributing/getting-started",
+              "contributing/development-setup",
+              "contributing/architecture",
+              "contributing/coding-standards"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Offline-first API client with local file storage",
+    "Git-friendly collections using .bru plain text format",
+    "Desktop app built with Electron and React",
+    "CLI for automated testing and CI/CD integration",
+    "Support for REST, GraphQL, and gRPC",
+    "Environment and variable management",
+    "Pre-request and post-response scripting",
+    "Collection-level authentication and configuration",
+    "OpenAPI import and export",
+    "Cross-platform (Mac, Windows, Linux)"
+  ],
+  "publicApiSurface": [
+    "bru run - Execute API requests from CLI",
+    "bru import openapi - Import OpenAPI specifications",
+    "@usebruno/cli - NPM package for CLI tool",
+    "@usebruno/lang - Bru language parser",
+    "@usebruno/schema - Collection schema definitions",
+    "Desktop Application - Electron-based GUI",
+    "Collection Format - .bru file specification",
+    "Scripting API - Pre-request and post-response hooks",
+    "Test API - Assertion and validation methods",
+    "Environment Variables - Runtime configuration"
+  ]
+}
