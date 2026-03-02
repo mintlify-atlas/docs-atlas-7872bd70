@@ -1,0 +1,474 @@
+---
+title: Environments
+description: Manage environment variables and secrets across different contexts in Bruno
+---
+
+## Overview
+
+Environments in Bruno allow you to define variables that can be used across your API requests. You can create multiple environments (like Local, Staging, Production) and switch between them easily.
+
+<Info>
+  Environment files are stored as `.bru` files in the `environments/` folder within your collection.
+</Info>
+
+## Environment Structure
+
+Environments are stored in your collection's `environments/` folder:
+
+```
+my-collection/
+├── bruno.json
+├── collection.bru
+├── environments/
+│   ├── Local.bru
+│   ├── Prod.bru
+│   └── Stage.bru
+└── requests/
+    └── ...
+```
+
+## Creating Environments
+
+### Basic Environment
+
+Here's a simple environment file from the Bruno source:
+
+```bru Local.bru
+vars {
+  host: http://localhost:8080
+  localhost: http://localhost:8081
+  httpfaker: https://www.httpfaker.org
+  bearer_auth_token: your_secret_token
+  basic_auth_password: della
+  env.var1: envVar1
+  env-var2: envVar2
+  foo: bar
+  testSetEnvVar: bruno-29653
+  echo-host: https://echo.usebruno.com
+}
+```
+
+### Production Environment
+
+```bru Prod.bru
+vars {
+  baseUrl: /api/v1
+  name: production
+  host: api.example.com:443
+  protocol: https
+}
+```
+
+### Development Environment
+
+```bru dev.bru
+vars {
+  baseUrl: /api/v1
+  name: development
+  host: localhost:3000
+}
+```
+
+## Secret Variables
+
+Mark sensitive values as secrets to prevent them from being accidentally committed:
+
+```bru Local.bru
+vars {
+  host: http://localhost:8080
+  client_id: client_id_1
+  client_secret: client_secret_1
+  github_authorize_url: https://github.com/login/oauth/authorize
+  github_access_token_url: https://github.com/login/oauth/access_token
+}
+
+vars:secret [
+  github_client_secret,
+  github_client_id,
+  google_client_id,
+  google_client_secret,
+  github_authorization_code,
+  passwordCredentials_access_token,
+  client_credentials_access_token,
+  authorization_code_access_token,
+  github_access_token
+]
+```
+
+<Warning>
+  Variables listed in the `vars:secret` block are marked as sensitive. Bruno will warn you before committing files that contain secret values.
+</Warning>
+
+## Using Environment Variables
+
+Reference environment variables using double curly braces:
+
+```bru
+get {
+  url: {{host}}/api/users
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{bearer_auth_token}}
+}
+
+headers {
+  X-API-Key: {{api_key}}
+  Content-Type: application/json
+}
+```
+
+### In Request Body
+
+```bru
+body:json {
+  {
+    "apiKey": "{{api_key}}",
+    "environment": "{{env_name}}",
+    "baseUrl": "{{host}}"
+  }
+}
+```
+
+### In Scripts
+
+```bru
+script:pre-request {
+  const host = bru.getEnvVar('host');
+  const token = bru.getEnvVar('bearer_auth_token');
+  
+  console.log('Calling:', host);
+  req.setHeader('Authorization', `Bearer ${token}`);
+}
+```
+
+## Runtime Variables
+
+Set temporary variables during request execution that don't persist:
+
+```bru
+script:pre-request {
+  // Runtime variable (not persisted)
+  bru.setVar("requestId", Date.now());
+  bru.setVar("randomValue", Math.random());
+}
+```
+
+## Persisting Environment Variables
+
+Update environment variables from scripts and persist them to the environment file:
+
+```bru api-setEnvVar-with-persist.bru
+meta {
+  name: api-setEnvVar-with-persist
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/ping
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  bru.setEnvVar("token", "secret", { persist: true });
+}
+```
+
+<Info>
+  Use `{ persist: true }` to save the variable value to the environment file. Without this option, variables are only available during the current session.
+</Info>
+
+### Post-Response Persistence
+
+```bru
+script:post-response {
+  // Extract and persist auth token
+  if (res.status === 200) {
+    const data = res.getBody();
+    bru.setEnvVar("authToken", data.token, { persist: true });
+    bru.setEnvVar("userId", data.user.id, { persist: true });
+  }
+}
+```
+
+## Deleting Environment Variables
+
+Remove environment variables from scripts:
+
+```bru api-deleteEnvVar.bru
+meta {
+  name: api-deleteEnvVar
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/ping
+  body: none
+  auth: none
+}
+
+script:post-response {
+  // Delete an environment variable
+  bru.deleteEnvVar("temporaryToken");
+}
+```
+
+## Multiline Variables
+
+Define multiline values using triple quotes:
+
+```bru Test.bru
+vars {
+  host: http://localhost:8081
+  multilineVar: '''
+    This is a multiline
+    variable value that
+    spans multiple lines
+  '''
+  jsonConfig: '''
+    {
+      "setting1": "value1",
+      "setting2": "value2"
+    }
+  '''
+}
+```
+
+Use multiline variables in your requests:
+
+```bru
+post {
+  url: {{host}}/api/config
+  body: json
+  auth: none
+}
+
+body:json {
+  {{jsonConfig}}
+}
+```
+
+## Variable Interpolation
+
+Variables can reference other variables:
+
+```bru
+vars {
+  protocol: https
+  domain: api.example.com
+  baseUrl: {{protocol}}://{{domain}}
+  apiUrl: {{baseUrl}}/v1
+  usersEndpoint: {{apiUrl}}/users
+}
+```
+
+### Process Environment Variables
+
+```bru
+vars {
+  host: http://localhost:8080
+  bark: {{process.env.PROC_ENV_VAR}}
+  apiKey: {{process.env.API_KEY}}
+}
+```
+
+## Variable Scope and Priority
+
+Bruno resolves variables in this order (highest to lowest priority):
+
+<Steps>
+  <Step title="Runtime Variables">
+    Variables set with `bru.setVar()` during request execution
+  </Step>
+  
+  <Step title="Environment Variables">
+    Variables defined in the active environment file
+  </Step>
+  
+  <Step title="Collection Variables">
+    Variables defined in `collection.bru` or `folder.bru`
+  </Step>
+  
+  <Step title="Process Environment Variables">
+    System environment variables accessed via `{{process.env.VAR_NAME}}`
+  </Step>
+</Steps>
+
+## Environment API
+
+Bruno provides a JavaScript API for working with environments:
+
+```javascript
+// Get environment variable
+const host = bru.getEnvVar('host');
+
+// Set environment variable (runtime only)
+bru.setEnvVar('tempVar', 'value');
+
+// Set and persist to environment file
+bru.setEnvVar('authToken', token, { persist: true });
+
+// Delete environment variable
+bru.deleteEnvVar('tempVar');
+
+// Get runtime variable
+const requestId = bru.getVar('requestId');
+
+// Set runtime variable
+bru.setVar('timestamp', Date.now());
+```
+
+## Non-String Values
+
+Environment variables support various data types:
+
+```bru Stage.bru
+vars {
+  apiUrl: https://api.staging.example.com
+  timeout: 5000
+  retryCount: 3
+  debugMode: true
+  supportedVersions: ["v1", "v2", "v3"]
+}
+```
+
+Access in scripts:
+
+```bru
+script:pre-request {
+  const timeout = bru.getEnvVar('timeout');
+  const debugMode = bru.getEnvVar('debugMode');
+  const versions = bru.getEnvVar('supportedVersions');
+  
+  if (debugMode) {
+    console.log('Debug mode enabled');
+    console.log('Timeout:', timeout);
+  }
+}
+```
+
+## Global Environments
+
+Bruno also supports global environments that are available across all collections. Global environment files are stored outside your collection folder.
+
+<Note>
+  Global environments are useful for system-wide settings like proxy configuration or credentials that are used across multiple collections.
+</Note>
+
+## Color Coding
+
+You can assign colors to environments for visual identification:
+
+```bru
+vars {
+  baseUrl: /api/v1
+  name: production
+  host: api.example.com
+  color: red
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Secrets" icon="lock">
+    Mark sensitive values as secrets in the `vars:secret` block
+  </Card>
+  
+  <Card title="Environment Per Context" icon="layer-group">
+    Create separate environments for local, staging, and production
+  </Card>
+  
+  <Card title="Descriptive Names" icon="signature">
+    Use clear variable names like `apiBaseUrl` instead of `url1`
+  </Card>
+  
+  <Card title="Version Control" icon="code-branch">
+    Commit environment templates, but keep actual secrets in local files
+  </Card>
+</CardGroup>
+
+## Example: Complete Environment Setup
+
+Here's a comprehensive example showing multiple environments:
+
+```bru Local.bru
+vars {
+  # API Configuration
+  protocol: http
+  host: localhost:8080
+  baseUrl: {{protocol}}://{{host}}
+  apiVersion: v1
+  apiUrl: {{baseUrl}}/api/{{apiVersion}}
+  
+  # Authentication
+  bearer_auth_token: dev_token_123
+  basic_auth_password: devpass
+  
+  # Feature Flags
+  debug: true
+  verbose: true
+  
+  # OAuth
+  client_id: local_client_id
+  auth_url: http://localhost:8080/oauth/authorize
+  token_url: http://localhost:8080/oauth/token
+}
+
+vars:secret [
+  bearer_auth_token,
+  basic_auth_password,
+  client_secret
+]
+```
+
+```bru Production.bru
+vars {
+  # API Configuration
+  protocol: https
+  host: api.example.com
+  baseUrl: {{protocol}}://{{host}}
+  apiVersion: v1
+  apiUrl: {{baseUrl}}/api/{{apiVersion}}
+  
+  # Feature Flags
+  debug: false
+  verbose: false
+  
+  # OAuth
+  auth_url: https://auth.example.com/oauth/authorize
+  token_url: https://auth.example.com/oauth/token
+}
+
+vars:secret [
+  bearer_auth_token,
+  basic_auth_password,
+  client_id,
+  client_secret
+]
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Collections" icon="folder" href="/concepts/collections">
+    Learn about organizing requests in collections
+  </Card>
+  
+  <Card title="Bru Language" icon="code" href="/concepts/bru-language">
+    Master the .bru file format
+  </Card>
+  
+  <Card title="Scripting" icon="terminal" href="/api/scripting/overview">
+    Use JavaScript to manipulate variables dynamically
+  </Card>
+  
+  <Card title="Git Integration" icon="code-branch" href="/concepts/git-integration">
+    Version control your environments
+  </Card>
+</CardGroup>

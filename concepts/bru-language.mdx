@@ -1,0 +1,583 @@
+---
+title: Bru Language
+description: The plain text markup language Bruno uses to save API request information
+---
+
+## Overview
+
+Bru is Bruno's plain text markup language for defining API requests. It's human-readable, Git-friendly, and structured around blocks that define different aspects of an HTTP request.
+
+<Info>
+  Every `.bru` file represents a single API request and uses a block-based syntax for organizing request metadata, headers, body, scripts, and tests.
+</Info>
+
+## File Structure
+
+A `.bru` file is composed of blocks. There are three types of blocks:
+
+<CardGroup cols={3}>
+  <Card title="Dictionary Blocks" icon="book">
+    Key-value pairs for headers, metadata, auth, etc.
+  </Card>
+  
+  <Card title="Text Blocks" icon="align-left">
+    Multi-line text content for body, scripts, tests
+  </Card>
+  
+  <Card title="List Blocks" icon="list">
+    Arrays of items like tags or secret variables
+  </Card>
+</CardGroup>
+
+## Basic Request Example
+
+Here's a complete example from the Bruno test suite:
+
+```bru echo json.bru
+meta {
+  name: echo json
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/api/echo/json
+  body: json
+  auth: none
+}
+
+headers {
+  foo: bar
+}
+
+auth:basic {
+  username: asd
+  password: j
+}
+
+auth:bearer {
+  token: 
+}
+
+body:json {
+  {
+    "hello": "bruno"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+script:pre-request {
+  bru.setVar("foo", "foo-world-2");
+}
+
+tests {
+  test("should return json", function() {
+    const data = res.getBody();
+    expect(res.getBody()).to.eql({
+      "hello": "bruno"
+    });
+  });  
+}
+```
+
+## Core Blocks
+
+### Meta Block
+
+Every request starts with a meta block defining its properties:
+
+```bru
+meta {
+  name: Login Request
+  type: http
+  seq: 3
+}
+```
+
+<ParamField path="name" type="string" required>
+  Display name of the request
+</ParamField>
+
+<ParamField path="type" type="string" required>
+  Request type: `http`, `graphql-request`, `grpc-request`, `ws-request`, or `js`
+</ParamField>
+
+<ParamField path="seq" type="number">
+  Sequence number for ordering requests
+</ParamField>
+
+### HTTP Method Blocks
+
+Define the HTTP method and URL:
+
+```bru
+get {
+  url: {{host}}/api/users
+  body: none
+  auth: inherit
+}
+```
+
+```bru
+post {
+  url: https://echo.usebruno.com
+  body: json
+  auth: none
+}
+```
+
+```bru
+put {
+  url: {{baseUrl}}/users/{{userId}}
+  body: json
+  auth: bearer
+}
+```
+
+Supported methods: `get`, `post`, `put`, `delete`, `patch`, `options`, `head`, `connect`, `trace`
+
+<Tip>
+  Use `auth: inherit` to use authentication configured at the folder or collection level.
+</Tip>
+
+### Headers Block
+
+Define request headers using key-value pairs:
+
+```bru
+headers {
+  Content-Type: application/json
+  foo: bar
+  Authorization: Bearer {{token}}
+}
+```
+
+**Disabling headers:**
+
+```bru
+headers {
+  Content-Type: application/json
+  ~Disabled-Header: this-wont-be-sent
+}
+```
+
+Use the `~` prefix to disable a header without deleting it.
+
+### Query Parameters
+
+```bru
+params:query {
+  page: 1
+  limit: 20
+  ~debug: true
+}
+```
+
+### Path Parameters
+
+```bru
+get {
+  url: http://localhost:8081/api/echo/path/:path
+  auth: inherit
+}
+
+params:path {
+  path: some-data
+}
+```
+
+## Authentication Blocks
+
+Bruno supports multiple authentication methods:
+
+### Bearer Token
+
+```bru
+get {
+  url: {{host}}/api/auth/bearer/protected
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{bearer_auth_token}}
+}
+```
+
+### Basic Auth
+
+```bru
+auth:basic {
+  username: myuser
+  password: mypassword
+}
+```
+
+### API Key
+
+```bru
+auth:apikey {
+  key: X-API-Key
+  value: {{apiKey}}
+  placement: header
+}
+```
+
+### OAuth2
+
+```bru
+auth:oauth2 {
+  grant_type: authorization_code
+  callback_url: http://localhost:8080/callback
+  authorization_url: https://oauth.example.com/authorize
+  access_token_url: https://oauth.example.com/token
+  client_id: {{client_id}}
+  client_secret: {{client_secret}}
+  scope: read write
+  state: random-state-string
+  pkce: true
+}
+```
+
+### AWS Signature v4
+
+```bru
+auth:awsv4 {
+  accessKeyId: {{aws_access_key}}
+  secretAccessKey: {{aws_secret_key}}
+  sessionToken: {{aws_session_token}}
+  service: s3
+  region: us-east-1
+}
+```
+
+### Digest Auth
+
+```bru
+auth:digest {
+  username: myuser
+  password: mypassword
+}
+```
+
+## Body Blocks
+
+### JSON Body
+
+```bru
+post {
+  url: {{host}}/api/users
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "age": 30
+  }
+}
+```
+
+### XML Body
+
+```bru
+body:xml {
+  <?xml version="1.0" encoding="UTF-8"?>
+  <user>
+    <name>John Doe</name>
+    <email>john@example.com</email>
+  </user>
+}
+```
+
+### Text Body
+
+```bru
+body:text {
+  This is plain text content
+  that can span multiple lines.
+}
+```
+
+### Form URL Encoded
+
+```bru
+body:form-urlencoded {
+  username: john
+  password: secret123
+  remember: true
+  ~disabled_field: value
+}
+```
+
+### Multipart Form
+
+```bru
+body:multipart-form {
+  username: john
+  avatar: @file(/path/to/image.jpg)
+  documents: @file(/path/file1.pdf|/path/file2.pdf)
+}
+```
+
+### GraphQL
+
+```bru
+body:graphql {
+  query {
+    users(limit: 10) {
+      id
+      name
+      email
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "limit": 10
+  }
+}
+```
+
+## Variables
+
+### Pre-request Variables
+
+```bru
+vars:pre-request {
+  collection_pre_var: collection_pre_var_value
+  collection_pre_var_token: {{request_pre_var_token}}
+  collection-var: collection-var-value
+}
+```
+
+### Post-response Variables
+
+```bru
+vars:post-response {
+  token: {{res.body.token}}
+  userId: {{res.body.id}}
+}
+```
+
+## Scripts
+
+### Pre-request Script
+
+```bru
+script:pre-request {
+  // Set variables before the request
+  bru.setVar("timestamp", Date.now());
+  bru.setVar("randomId", Math.random().toString(36));
+  
+  // Modify request
+  req.setHeader("X-Request-ID", bru.getVar("randomId"));
+}
+```
+
+### Post-response Script
+
+```bru
+script:post-response {
+  // Save response data
+  if (res.status === 200) {
+    const data = res.getBody();
+    bru.setEnvVar("authToken", data.token, { persist: true });
+    bru.setVar("userId", data.user.id);
+  }
+}
+```
+
+## Tests and Assertions
+
+### Assertions Block
+
+```bru
+assert {
+  res.status: eq 200
+  res.body.message: Authentication successful
+}
+```
+
+### Tests Block
+
+```bru
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response has json field", function() {
+    const response = res.getBody();
+    expect(response).to.have.property('json');
+  });
+  
+  test("Response json has username", function() {
+    const response = res.getBody();
+    expect(response.json).to.have.property('username');
+  });
+}
+```
+
+## Settings Block
+
+Configure request-specific settings:
+
+```bru
+settings {
+  encodeUrl: true
+  followRedirects: true
+  maxRedirects: 10
+  timeout: 30000
+}
+```
+
+<ParamField path="encodeUrl" type="boolean">
+  Whether to URL-encode the request URL (default: true)
+</ParamField>
+
+<ParamField path="followRedirects" type="boolean">
+  Whether to follow HTTP redirects (default: true)
+</ParamField>
+
+<ParamField path="maxRedirects" type="number">
+  Maximum number of redirects to follow (0-50)
+</ParamField>
+
+<ParamField path="timeout" type="number">
+  Request timeout in milliseconds
+</ParamField>
+
+## Documentation Block
+
+Add documentation to your request:
+
+```bru
+docs {
+  # Login Endpoint
+  
+  This endpoint authenticates a user and returns a JWT token.
+  
+  ## Authentication
+  No authentication required for this endpoint.
+  
+  ## Response
+  Returns a JSON object with:
+  - `token`: JWT authentication token
+  - `user`: User object with id, name, email
+}
+```
+
+## Advanced Features
+
+### Multiline Text with Delimiters
+
+Use triple quotes for multiline values:
+
+```bru
+headers {
+  X-Custom-Header: '''
+    This is a multiline
+    header value that spans
+    multiple lines
+  '''
+}
+```
+
+### Quoted Keys
+
+Use quotes for keys with special characters:
+
+```bru
+headers {
+  "Content-Type": application/json
+  "X-Special-Key-With-Spaces": value
+}
+```
+
+### Disabling Items
+
+Prefix any key with `~` to disable it:
+
+```bru
+headers {
+  Content-Type: application/json
+  ~Debug-Mode: true
+}
+
+params:query {
+  page: 1
+  ~verbose: true
+}
+```
+
+## Complete Example
+
+Here's a full-featured request from the Bruno source:
+
+```bru Login Request.bru
+meta {
+  name: Login Request
+  type: http
+  seq: 3
+}
+
+post {
+  url: https://echo.usebruno.com
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "username": "testuser",
+    "password": "testpass"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response has json field", function() {
+    const response = res.getBody();
+    expect(response).to.have.property('json');
+  });
+  
+  test("Response json has username", function() {
+    const response = res.getBody();
+    expect(response.json).to.have.property('username');
+  });
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Collections" icon="folder" href="/concepts/collections">
+    Learn how to organize requests into collections
+  </Card>
+  
+  <Card title="Environments" icon="globe" href="/concepts/environments">
+    Use variables across different environments
+  </Card>
+  
+  <Card title="Scripting" icon="code" href="/api/scripting/overview">
+    Write JavaScript to add dynamic behavior
+  </Card>
+  
+  <Card title="Testing" icon="flask" href="/desktop/tests">
+    Write tests and assertions for your APIs
+  </Card>
+</CardGroup>

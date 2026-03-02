@@ -1,0 +1,288 @@
+---
+title: Collections
+description: Learn how Bruno collections work, including folder structure, configuration, and organization
+---
+
+## Overview
+
+Bruno collections are stored as plain text files directly in your filesystem. Each collection is a folder containing `.bru` files for requests, environment files, and a `bruno.json` configuration file. This approach makes your API collections fully version-controllable and shareable.
+
+## Collection Structure
+
+A typical Bruno collection looks like this:
+
+```
+my-api-collection/
+├── bruno.json              # Collection configuration
+├── collection.bru          # Collection-level settings
+├── environments/           # Environment files
+│   ├── Local.bru
+│   └── Prod.bru
+├── auth/                   # Organized by folders
+│   ├── login.bru
+│   ├── logout.bru
+│   └── folder.bru          # Folder-level settings
+└── api/
+    └── v1/
+        ├── users.bru
+        └── posts.bru
+```
+
+## bruno.json Configuration
+
+The `bruno.json` file contains collection-wide settings and metadata.
+
+### Basic Configuration
+
+```json bruno.json
+{
+  "version": "1",
+  "name": "My API Collection",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
+```
+
+### Advanced Configuration
+
+```json bruno.json
+{
+  "version": "1",
+  "name": "bruno-testbench",
+  "type": "collection",
+  "proxy": {
+    "enabled": false,
+    "protocol": "http",
+    "hostname": "{{proxyHostname}}",
+    "port": 4000,
+    "auth": {
+      "enabled": false,
+      "username": "anoop",
+      "password": "password"
+    },
+    "bypassProxy": ""
+  },
+  "scripts": {
+    "moduleWhitelist": ["crypto", "buffer", "form-data"],
+    "additionalContextRoots": ["../additional-context-root-lib"]
+  },
+  "clientCertificates": {
+    "enabled": true,
+    "certs": []
+  },
+  "presets": {
+    "requestType": "http",
+    "requestUrl": "http://localhost:6000"
+  }
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Configuration Options">
+    - **version** - Collection format version (currently "1")
+    - **name** - Display name of your collection
+    - **type** - Always "collection"
+    - **ignore** - Files/folders to ignore (like .gitignore)
+    - **proxy** - HTTP proxy configuration
+    - **scripts** - Script execution settings and module access
+    - **clientCertificates** - SSL/TLS client certificate configuration
+    - **presets** - Default values for new requests
+  </Accordion>
+</AccordionGroup>
+
+## Collection-Level Settings
+
+The `collection.bru` file defines default settings applied to all requests in the collection.
+
+```bru collection.bru
+headers {
+  check: again
+  token: {{collection_pre_var_token}}
+  collection-header: collection-header-value
+}
+
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{bearer_auth_token}}
+}
+
+vars:pre-request {
+  collection_pre_var: collection_pre_var_value
+  collection_pre_var_token: {{request_pre_var_token}}
+  collection-var: collection-var-value
+}
+
+script:pre-request {
+  // Runs before every request in the collection
+  const shouldTestCollectionScripts = bru.getVar('should-test-collection-scripts');
+  if(shouldTestCollectionScripts) {
+   bru.setVar('collection-var-set-by-collection-script', 'collection-var-value-set-by-collection-script');
+  }
+}
+
+tests {
+  // Runs after every request in the collection
+  const shouldTestCollectionScripts = bru.getVar('should-test-collection-scripts');
+  const collectionVar = bru.getVar("collection-var-set-by-collection-script");
+  if (shouldTestCollectionScripts && collectionVar) {
+    test("collection level test - should get the var that was set by the collection script", function() {
+      expect(collectionVar).to.equal("collection-var-value-set-by-collection-script");
+    }); 
+    bru.setVar('collection-var-set-by-collection-script', null); 
+    bru.setVar('should-test-collection-scripts', null);
+  }
+}
+
+docs {
+  # bruno-testbench 🐶
+  
+  This is a test collection that I am using to test various functionalities around bruno
+}
+```
+
+## Folder Organization
+
+Organize your requests into folders for better structure. Each folder can have a `folder.bru` file with folder-level settings.
+
+### folder.bru
+
+```bru folder.bru
+meta {
+  name: js
+}
+
+headers {
+  folder-header: folder-header-value
+}
+
+script:pre-request {
+  // Runs before requests in this folder
+  const shouldTestFolderScripts = bru.getVar('should-test-folder-scripts');
+  if(shouldTestFolderScripts) {
+   bru.setVar('folder-var-set-by-folder-script', 'folder-var-value-set-by-folder-script');
+  }
+}
+
+tests {
+  // Runs after requests in this folder
+  const shouldTestFolderScripts = bru.getVar('should-test-folder-scripts');
+  const folderVar = bru.getVar("folder-var-set-by-folder-script");
+  if (shouldTestFolderScripts && folderVar) {
+    test("folder level test - should get the var that was set by the folder script", function() {
+      expect(folderVar).to.equal("folder-var-value-set-by-folder-script");
+    }); 
+    bru.setVar('folder-var-set-by-folder-script', null); 
+    bru.setVar('should-test-folder-scripts', null);
+  }
+}
+```
+
+<Note>
+  Folder-level settings are inherited by all requests within that folder. Request-level settings override folder settings, which override collection settings.
+</Note>
+
+## Settings Inheritance
+
+Bruno uses a cascading system for settings:
+
+```
+Collection Settings (collection.bru)
+  ↓
+Folder Settings (folder.bru)
+  ↓
+Request Settings (request.bru)
+```
+
+Each level can override or extend settings from parent levels.
+
+<CardGroup cols={2}>
+  <Card title="Headers" icon="heading">
+    Headers defined at collection or folder level are merged with request headers
+  </Card>
+  <Card title="Authentication" icon="lock">
+    Requests can use `auth: inherit` to use collection/folder auth settings
+  </Card>
+  <Card title="Variables" icon="brackets-curly">
+    Variables are available to all child requests and can be overridden
+  </Card>
+  <Card title="Scripts" icon="code">
+    Pre-request and post-response scripts run in order: collection → folder → request
+  </Card>
+</CardGroup>
+
+## Creating a Collection
+
+<Steps>
+  <Step title="Create a folder">
+    Create a new folder for your collection:
+    ```bash
+    mkdir my-api-collection
+    cd my-api-collection
+    ```
+  </Step>
+  
+  <Step title="Add bruno.json">
+    Create a `bruno.json` file with your collection settings:
+    ```json
+    {
+      "version": "1",
+      "name": "My API Collection",
+      "type": "collection"
+    }
+    ```
+  </Step>
+  
+  <Step title="Add requests">
+    Create `.bru` files for your API requests. See the [Bru Language](/concepts/bru-language) guide for syntax.
+  </Step>
+  
+  <Step title="Open in Bruno">
+    Open the collection folder in Bruno to start testing your APIs.
+  </Step>
+</Steps>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Logical Organization" icon="folder-tree">
+    Group related requests into folders (e.g., `auth/`, `users/`, `products/`)
+  </Card>
+  
+  <Card title="Descriptive Names" icon="signature">
+    Use clear, descriptive names for files and folders
+  </Card>
+  
+  <Card title="Shared Settings" icon="layer-group">
+    Put common headers and auth in `collection.bru` to avoid repetition
+  </Card>
+  
+  <Card title="Environment Variables" icon="server">
+    Use environments for different servers (local, staging, production)
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Bru Language" icon="code" href="/concepts/bru-language">
+    Learn the .bru file format for defining requests
+  </Card>
+  
+  <Card title="Environments" icon="globe" href="/concepts/environments">
+    Set up environment variables for different contexts
+  </Card>
+  
+  <Card title="Git Integration" icon="code-branch" href="/concepts/git-integration">
+    Version control your API collections with Git
+  </Card>
+  
+  <Card title="Scripting" icon="terminal" href="/api/scripting/overview">
+    Add JavaScript for dynamic request/response handling
+  </Card>
+</CardGroup>

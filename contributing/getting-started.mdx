@@ -1,0 +1,142 @@
+---
+title: Getting Started with Contributing
+description: Learn how to contribute to Bruno and make it better together
+---
+
+## Let's make Bruno better, together!
+
+We're excited that you're interested in contributing to Bruno. This guide will help you get started with contributing to the project, whether you're fixing bugs, adding features, or improving documentation.
+
+<Note>
+Bruno is built using React and Electron. We use npm workspaces to manage our monorepo structure.
+</Note>
+
+## How You Can Contribute
+
+There are many ways to contribute to Bruno:
+
+<CardGroup cols={2}>
+  <Card title="Code Contributions" icon="code">
+    Fix bugs, add features, or improve performance
+  </Card>
+  <Card title="Documentation" icon="book">
+    Help improve our documentation and guides
+  </Card>
+  <Card title="Bug Reports" icon="bug">
+    Report issues you encounter while using Bruno
+  </Card>
+  <Card title="Feature Requests" icon="lightbulb">
+    Suggest new features or improvements
+  </Card>
+</CardGroup>
+
+## Before You Start
+
+<Steps>
+  <Step title="Read the Documentation">
+    Familiarize yourself with Bruno's [architecture](/contributing/architecture) and [coding standards](/contributing/coding-standards).
+  </Step>
+  
+  <Step title="Set Up Your Environment">
+    Follow our [development setup guide](/contributing/development-setup) to get Bruno running locally.
+  </Step>
+  
+  <Step title="Find an Issue">
+    Browse our [GitHub issues](https://github.com/usebruno/bruno/issues) to find something to work on, or create a new issue if you've found a bug or have a feature idea.
+  </Step>
+  
+  <Step title="Start Contributing">
+    Make your changes following our coding standards and submit a pull request.
+  </Step>
+</Steps>
+
+## Pull Request Guidelines
+
+<Warning>
+Please keep PRs small and focused on one thing. This makes them easier to review and merge.
+</Warning>
+
+### Branch Naming Convention
+
+Follow this format when creating branches:
+
+<CodeGroup>
+```bash Feature Branch
+# For new features
+git checkout -b feature/dark-mode
+git checkout -b feature/graphql-support
+```
+
+```bash Bugfix Branch
+# For bug fixes
+git checkout -b bugfix/response-timeout
+git checkout -b bugfix/auth-header-issue
+```
+</CodeGroup>
+
+### PR Checklist
+
+Before submitting your pull request:
+
+- [ ] Your code follows the [coding standards](/contributing/coding-standards)
+- [ ] You've added tests for new functionality
+- [ ] All tests pass locally
+- [ ] You've updated documentation if needed
+- [ ] Your commits have clear, descriptive messages
+- [ ] The PR description clearly explains what changes were made and why
+
+## Testing Your Changes
+
+Run tests before submitting your PR:
+
+<CodeGroup>
+```bash All Tests
+# Run tests across all workspaces
+npm test --workspaces --if-present
+```
+
+```bash Specific Package
+# Test a specific package
+npm run test --workspace=packages/bruno-app
+npm run test --workspace=packages/bruno-query
+```
+</CodeGroup>
+
+## Code Review Process
+
+Once you submit a PR:
+
+1. **Automated Checks**: GitHub Actions will run automated tests
+2. **Code Review**: Maintainers will review your code and provide feedback
+3. **Iterations**: You may need to make changes based on feedback
+4. **Merge**: Once approved, a maintainer will merge your PR
+
+<Tip>
+Be patient during the review process. Maintainers are volunteers and may take some time to review your contribution.
+</Tip>
+
+## Getting Help
+
+If you need help or have questions:
+
+- Join our [Discord community](https://discord.com/invite/KgcZUncpjq)
+- Ask on [Stack Overflow](https://stackoverflow.com/questions/tagged/bruno) with the `bruno` tag
+- Open a discussion on [GitHub Discussions](https://github.com/usebruno/bruno/discussions)
+
+## Code of Conduct
+
+Be respectful and constructive in all interactions. We're building a welcoming community where everyone can contribute.
+
+## Non-Code Contributions
+
+<Info>
+Even if you can't contribute code, you can still help! File bug reports, request features, share testimonials, or help other users in the community.
+</Info>
+
+### Share Your Testimonials
+
+If Bruno has helped you at work or with your projects, please share your [testimonials on GitHub Discussions](https://github.com/usebruno/bruno/discussions/343).
+
+## Next Steps
+
+Ready to start contributing? Head over to the [Development Setup](/contributing/development-setup) guide to get your environment configured.

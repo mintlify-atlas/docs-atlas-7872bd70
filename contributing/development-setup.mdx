@@ -1,0 +1,276 @@
+---
+title: Development Setup
+description: Set up your local development environment to contribute to Bruno
+---
+
+## Prerequisites
+
+<Warning>
+You need **Node.js v22.x or the latest LTS version** to run Bruno. We use npm workspaces in the project.
+</Warning>
+
+### Install Node.js
+
+If you're using [nvm](https://github.com/nvm-sh/nvm) (recommended):
+
+```bash
+# Install and use Node.js v22
+nvm install 22
+nvm use 22
+```
+
+Alternatively, download Node.js from [nodejs.org](https://nodejs.org/en/).
+
+## Quick Start
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/usebruno/bruno.git
+    cd bruno
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    # Use Node.js 22
+    nvm use
+    
+    # Install dependencies
+    npm i --legacy-peer-deps
+    ```
+    
+    <Note>
+    The `--legacy-peer-deps` flag is required due to peer dependency conflicts in some packages.
+    </Note>
+  </Step>
+  
+  <Step title="Build Packages">
+    Choose one of the following options:
+    
+    <Tabs>
+      <Tab title="Option 1: Setup Script (Recommended)">
+        ```bash
+        # Install dependencies and build all packages
+        npm run setup
+        ```
+      </Tab>
+      
+      <Tab title="Option 2: Manual Build">
+        ```bash
+        # Build packages individually
+        npm run build:graphql-docs
+        npm run build:bruno-query
+        npm run build:bruno-common
+        npm run build:bruno-converters
+        npm run build:bruno-requests
+        npm run build:schema-types
+        npm run build:bruno-filestore
+        
+        # Bundle JS sandbox libraries
+        npm run sandbox:bundle-libraries --workspace=packages/bruno-js
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Run the Application">
+    Choose your preferred development mode:
+    
+    <Tabs>
+      <Tab title="Concurrent (Recommended)">
+        ```bash
+        # Run both React and Electron together
+        npm run dev
+        ```
+      </Tab>
+      
+      <Tab title="Separate Terminals">
+        ```bash Terminal 1 - React App
+        npm run dev:web
+        ```
+        
+        ```bash Terminal 2 - Electron App
+        npm run dev:electron
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+<Check>
+Bruno should now be running! The React app will be available in the Electron window.
+</Check>
+
+## Development Scripts
+
+### Core Development Commands
+
+<CodeGroup>
+```bash Development
+# Run both web and electron concurrently
+npm run dev
+
+# Run with hot reload
+npm run dev:watch
+
+# Run web app only
+npm run dev:web
+
+# Run electron app only
+npm run dev:electron
+
+# Debug electron with inspector
+npm run dev:electron:debug
+```
+
+```bash Building
+# Build web app
+npm run build:web
+
+# Build individual packages
+npm run build:bruno-common
+npm run build:bruno-converters
+npm run build:bruno-query
+npm run build:bruno-requests
+npm run build:bruno-filestore
+
+# Build electron app for production
+npm run build:electron
+```
+
+```bash Testing
+# Run all tests
+npm test --workspaces --if-present
+
+# Test specific packages
+npm run test --workspace=packages/bruno-app
+npm run test --workspace=packages/bruno-electron
+npm run test --workspace=packages/bruno-query
+npm run test --workspace=packages/bruno-converters
+npm run test --workspace=packages/bruno-lang
+```
+
+```bash Linting
+# Run ESLint
+npm run lint
+
+# Auto-fix issues
+npm run lint:fix
+```
+</CodeGroup>
+
+## Custom Configuration
+
+### Custom Electron userData Path
+
+You can customize the Electron `userData` path in development mode:
+
+```bash
+ELECTRON_USER_DATA_PATH=$(realpath ~/Desktop/bruno-test) npm run dev:electron
+```
+
+This creates a `bruno-test` folder on your Desktop and uses it as the `userData` path, keeping your development data separate from your production Bruno installation.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Unsupported Platform Error">
+    If you encounter an `Unsupported platform` error during `npm install`:
+    
+    ```bash
+    # Delete all node_modules directories
+    find ./ -type d -name "node_modules" -print0 | while read -d $'\0' dir; do
+      rm -rf "$dir"
+    done
+    
+    # Delete all package-lock.json files
+    find . -type f -name "package-lock.json" -delete
+    
+    # Reinstall dependencies
+    npm i --legacy-peer-deps
+    ```
+  </Accordion>
+  
+  <Accordion title="Build Failures">
+    If package builds fail:
+    
+    1. Ensure you're using Node.js v22.x
+    2. Clear all build artifacts: `rm -rf packages/*/dist`
+    3. Run the setup script again: `npm run setup`
+  </Accordion>
+  
+  <Accordion title="Electron Won't Start">
+    If Electron fails to start:
+    
+    1. Ensure the web app built successfully
+    2. Check that all dependencies are installed
+    3. Try running web and electron separately to identify the issue
+  </Accordion>
+  
+  <Accordion title="Hot Reload Not Working">
+    If hot reload isn't working:
+    
+    1. Use `npm run dev:watch` instead of `npm run dev`
+    2. Ensure file watchers aren't hitting system limits (common on Linux)
+    3. Restart the development server
+  </Accordion>
+</AccordionGroup>
+
+## Development Tools
+
+### Storybook
+
+Bruno uses Storybook for component development:
+
+```bash
+npm run storybook
+```
+
+This opens Storybook at `http://localhost:6006` where you can develop and test UI components in isolation.
+
+### End-to-End Testing
+
+Run Playwright E2E tests:
+
+<CodeGroup>
+```bash Default Tests
+npm run test:e2e
+```
+
+```bash SSL Tests
+npm run test:e2e:ssl
+```
+
+```bash Code Generation
+npm run test:codegen
+```
+</CodeGroup>
+
+## IDE Setup
+
+### VS Code (Recommended)
+
+Recommended extensions:
+
+- **ESLint**: For linting JavaScript/React code
+- **Prettier**: For code formatting
+- **Tailwind CSS IntelliSense**: For Tailwind autocomplete
+- **styled-components**: For styled-components syntax highlighting
+
+### ESLint Configuration
+
+Bruno uses ESLint with custom rules. The configuration is already set up in the project.
+
+## Next Steps
+
+Now that your development environment is set up:
+
+1. Read about [Bruno's architecture](/contributing/architecture)
+2. Familiarize yourself with our [coding standards](/contributing/coding-standards)
+3. Find an issue to work on in [GitHub Issues](https://github.com/usebruno/bruno/issues)
+4. Start contributing!
+
+<Tip>
+Run the test suite before making changes to ensure everything works. This gives you a baseline to compare against after your changes.
+</Tip>

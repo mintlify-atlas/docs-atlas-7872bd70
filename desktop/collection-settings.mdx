@@ -1,0 +1,579 @@
+---
+title: Collection Settings
+description: Configure collection-level settings for headers, auth, scripts, tests, variables, and more
+---
+
+Collection Settings in Bruno allow you to configure options that apply to all requests in a collection. Settings are managed through the `CollectionSettings` component and stored in the `collection.bru` file.
+
+## Accessing Collection Settings
+
+<Steps>
+  <Step title="Open Collection Actions">
+    Click the three-dot menu next to your collection name in the sidebar.
+  </Step>
+  <Step title="Select 'Settings'">
+    Choose "Settings" from the dropdown menu.
+  </Step>
+  <Step title="Navigate Between Tabs">
+    Use the tabs to configure different aspects of your collection.
+  </Step>
+</Steps>
+
+The `CollectionSettings` component provides multiple tabs, each managing specific configuration:
+
+<CardGroup cols={3}>
+  <Card title="Overview" icon="book">
+    Collection metadata and documentation
+  </Card>
+  <Card title="Headers" icon="heading">
+    Default HTTP headers for all requests
+  </Card>
+  <Card title="Vars" icon="brackets-curly">
+    Collection-level variables
+  </Card>
+  <Card title="Auth" icon="shield">
+    Collection-wide authentication
+  </Card>
+  <Card title="Script" icon="code">
+    Pre-request and post-response scripts
+  </Card>
+  <Card title="Tests" icon="vial">
+    Collection-level test suite
+  </Card>
+  <Card title="Presets" icon="wand-magic-sparkles">
+    URL and request presets
+  </Card>
+  <Card title="Proxy" icon="network-wired">
+    HTTP/HTTPS proxy configuration
+  </Card>
+  <Card title="Client Certificates" icon="certificate">
+    SSL/TLS client certificates
+  </Card>
+  <Card title="Protobuf" icon="file-code">
+    Protocol Buffers for gRPC
+  </Card>
+</CardGroup>
+
+## Overview Tab
+
+The `Overview` component displays collection metadata and documentation.
+
+### Collection Documentation
+
+From the test suite (`bruno-tests/collection/collection.bru`):
+
+```bru
+docs {
+  # bruno-testbench 🐶
+  
+  This is a test collection that I am using to test various functionalities around bruno
+}
+```
+
+<Info>
+  Use the `docs` section to provide an overview of your API collection, including purpose, authentication requirements, and usage guidelines.
+</Info>
+
+## Headers Tab
+
+The `Headers` component allows you to configure HTTP headers that will be sent with all requests in the collection.
+
+### Configuration
+
+<ParamField path="key" type="string">
+  Header name (e.g., "User-Agent", "X-API-Version")
+</ParamField>
+
+<ParamField path="value" type="string">
+  Header value. Supports variable interpolation: `{{variable}}`
+</ParamField>
+
+<ParamField path="enabled" type="boolean" default={true}>
+  Toggle to enable/disable headers without deleting them
+</ParamField>
+
+### Example
+
+From the test suite:
+
+```bru collection.bru
+headers {
+  check: again
+  token: {{collection_pre_var_token}}
+  collection-header: collection-header-value
+}
+```
+
+### Header Count Indicator
+
+The Headers tab shows the number of active headers:
+
+```jsx From CollectionSettings component
+<div className={getTabClassname('headers')} role="tab" onClick={() => setTab('headers')}>
+  Headers
+  {activeHeadersCount > 0 && <sup className="ml-1 font-medium">{activeHeadersCount}</sup>}
+</div>
+```
+
+<Tip>
+  Common collection-level headers include API version headers, custom user agents, or tracking headers that should be sent with every request.
+</Tip>
+
+## Vars Tab
+
+The `Vars` component manages collection-level variables that can be set and retrieved in scripts.
+
+### Variable Types
+
+<Tabs>
+  <Tab title="Pre-Request Variables">
+    Variables available before the request is sent.
+    
+    ```bru
+    vars:pre-request {
+      collection_pre_var: collection_pre_var_value
+      collection_pre_var_token: {{request_pre_var_token}}
+      collection-var: collection-var-value
+    }
+    ```
+  </Tab>
+  <Tab title="Post-Response Variables">
+    Variables set after receiving the response (typically set via scripts).
+    
+    ```javascript
+    // In post-response script
+    bru.setVar('response_time', res.responseTime);
+    bru.setVar('last_user_id', res.body.id);
+    ```
+  </Tab>
+</Tabs>
+
+### Variable Scope
+
+<AccordionGroup>
+  <Accordion title="Collection Variables">
+    Accessible throughout the entire collection. Set with `bru.setVar()` and retrieved with `bru.getVar()`.
+  </Accordion>
+  <Accordion title="Environment Variables">
+    Environment-specific values. Set with `bru.setEnvVar()` and retrieved with `bru.getEnvVar()`.
+  </Accordion>
+  <Accordion title="Request Variables">
+    Request-specific variables that don't persist beyond the request.
+  </Accordion>
+</AccordionGroup>
+
+### Active Vars Count
+
+The Vars tab displays the count of enabled variables:
+
+```jsx
+const activeVarsCount = requestVars.filter((v) => v.enabled).length + responseVars.filter((v) => v.enabled).length;
+
+{activeVarsCount > 0 && <sup className="ml-1 font-medium">{activeVarsCount}</sup>}
+```
+
+## Auth Tab
+
+The `Auth` component configures authentication that applies to all requests set to "Inherit" mode.
+
+### Supported Auth Types
+
+All authentication modes are available at the collection level:
+
+- AWS Sig v4 (`awsv4`)
+- Basic Auth (`basic`)
+- Bearer Token (`bearer`)
+- Digest Auth (`digest`)
+- NTLM Auth (`ntlm`)
+- OAuth 2.0 (`oauth2`)
+- WSSE Auth (`wsse`)
+- API Key (`apikey`)
+
+### Configuration Example
+
+```bru collection.bru
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{bearer_auth_token}}
+}
+```
+
+### Inheritance Info
+
+The Auth tab displays this helpful message:
+
+```text
+Configures authentication for the entire collection. 
+This applies to all requests using the 'Inherit' option 
+in the Auth tab.
+```
+
+<Info>
+  Individual requests can override collection auth by selecting a different auth mode instead of "Inherit".
+</Info>
+
+See the [Authentication guide](/desktop/authentication) for detailed information on each auth type.
+
+## Script Tab
+
+The `Script` component allows you to configure collection-level pre-request and post-response scripts.
+
+### Collection Scripts Example
+
+From the test suite:
+
+```bru collection.bru
+script:pre-request {
+  // Collection-level pre-request script
+  const shouldTestCollectionScripts = bru.getVar('should-test-collection-scripts');
+  if(shouldTestCollectionScripts) {
+   bru.setVar('collection-var-set-by-collection-script', 'collection-var-value-set-by-collection-script');
+  }
+}
+```
+
+### Script Execution Order
+
+When a request is sent:
+
+1. **Collection pre-request script** runs first
+2. **Folder pre-request script** runs next (if applicable)
+3. **Request pre-request script** runs last
+4. **HTTP request is sent**
+5. **Request post-response script** runs first
+6. **Folder post-response script** runs next
+7. **Collection post-response script** runs last
+
+### Use Cases for Collection Scripts
+
+<AccordionGroup>
+  <Accordion title="Token Refresh">
+    ```javascript
+    // Check and refresh expired tokens
+    const tokenExpiry = bru.getEnvVar('token_expiry');
+    if (!tokenExpiry || Date.now() >= tokenExpiry) {
+      // Trigger token refresh
+      bru.setVar('needs_refresh', true);
+    }
+    ```
+  </Accordion>
+  <Accordion title="Global Headers">
+    ```javascript
+    // Add dynamic headers to all requests
+    req.setHeader('X-Request-ID', crypto.randomUUID());
+    req.setHeader('X-Client-Version', '1.0.0');
+    req.setHeader('X-Timestamp', Date.now().toString());
+    ```
+  </Accordion>
+  <Accordion title="Logging">
+    ```javascript
+    // Log all requests
+    console.log('Request:', req.method, req.url);
+    console.log('Environment:', bru.getEnvVar('environment'));
+    ```
+  </Accordion>
+</AccordionGroup>
+
+See the [Scripts guide](/desktop/scripts) for more information.
+
+## Tests Tab
+
+The `Test` component allows you to write tests that run for every request in the collection.
+
+### Collection-Level Tests Example
+
+```javascript collection.bru
+tests {
+  // Run for all requests
+  test("Response time is acceptable", function() {
+    expect(res.responseTime).to.be.below(2000);
+  });
+  
+  test("Status code is successful", function() {
+    expect(res.status).to.be.at.least(200);
+    expect(res.status).to.be.below(300);
+  });
+  
+  test("Content-Type is JSON", function() {
+    const contentType = res.getHeader('content-type');
+    if (contentType) {
+      expect(contentType).to.include('application/json');
+    }
+  });
+}
+```
+
+### When to Use Collection Tests
+
+- Validate response time across all endpoints
+- Check for required headers (CORS, security headers)
+- Verify authentication is working collection-wide
+- Ensure consistent error response formats
+
+See the [Tests guide](/desktop/tests) for detailed testing information.
+
+## Presets Tab
+
+The `Presets` component allows you to configure default request settings.
+
+<ParamField path="requestUrl" type="string">
+  Default base URL for all requests. Can be overridden per request.
+</ParamField>
+
+### Preset Indicator
+
+```jsx
+const hasPresets = presets && presets.requestUrl !== '';
+
+{hasPresets && <StatusDot />}
+```
+
+## Proxy Tab
+
+The `ProxySettings` component configures HTTP/HTTPS proxy settings.
+
+### Proxy Configuration
+
+<ParamField path="hostname" type="string" required>
+  Proxy server hostname or IP address
+</ParamField>
+
+<ParamField path="port" type="number" required>
+  Proxy server port (e.g., 8080, 3128)
+</ParamField>
+
+<ParamField path="protocol" type="enum">
+  Proxy protocol: `http` or `https`
+</ParamField>
+
+<ParamField path="auth" type="object">
+  Optional proxy authentication:
+  - `username`: Proxy username
+  - `password`: Proxy password
+</ParamField>
+
+### Proxy Status Indicator
+
+```jsx
+const proxyEnabled = proxyConfig.hostname ? true : false;
+
+{Object.keys(proxyConfig).length > 0 && proxyEnabled && <StatusDot />}
+```
+
+<Warning>
+  Proxy settings apply to all requests in the collection. Ensure your proxy is properly configured to avoid request failures.
+</Warning>
+
+## Client Certificates Tab
+
+The `ClientCertSettings` component manages SSL/TLS client certificates for mutual authentication.
+
+### Certificate Configuration
+
+<ParamField path="domain" type="string" required>
+  Domain or host for which the certificate applies (e.g., "api.example.com")
+</ParamField>
+
+<ParamField path="certFilePath" type="string" required>
+  Path to the client certificate file (.crt, .pem)
+</ParamField>
+
+<ParamField path="keyFilePath" type="string" required>
+  Path to the private key file (.key, .pem)
+</ParamField>
+
+<ParamField path="passphrase" type="string">
+  Optional passphrase if the private key is encrypted
+</ParamField>
+
+### Multiple Certificates
+
+You can configure multiple client certificates for different domains:
+
+```jsx From CollectionSettings
+const clientCertConfig = collection.draft?.brunoConfig
+  ? get(collection, 'draft.brunoConfig.clientCertificates.certs', [])
+  : get(collection, 'brunoConfig.clientCertificates.certs', []);
+
+{clientCertConfig.length > 0 && <StatusDot />}
+```
+
+<Info>
+  Client certificates are useful for enterprise APIs that require mutual TLS authentication.
+</Info>
+
+## Protobuf Tab
+
+The `Protobuf` component manages Protocol Buffer definitions for gRPC requests.
+
+### Protobuf Configuration
+
+<ParamField path="protoFiles" type="array">
+  Array of `.proto` file paths relative to the collection directory
+</ParamField>
+
+### Example
+
+```text Directory Structure
+my-grpc-collection/
+├── bruno.json
+├── collection.bru
+├── proto/
+│   ├── user.proto
+│   ├── product.proto
+│   └── order.proto
+└── requests/
+    ├── get-user.bru
+    └── create-order.bru
+```
+
+In Collection Settings → Protobuf:
+
+```text
+Proto Files:
+- proto/user.proto
+- proto/product.proto
+- proto/order.proto
+```
+
+### Protobuf Status
+
+```jsx
+{protobufConfig.protoFiles && protobufConfig.protoFiles.length > 0 && <StatusDot />}
+```
+
+See the [Request Types guide](/desktop/request-types) for more on gRPC requests.
+
+## Settings Storage
+
+All collection settings are stored in the `collection.bru` file at the root of your collection folder:
+
+```bru Complete Example
+headers {
+  User-Agent: Bruno/1.0
+  X-API-Version: 2.0
+}
+
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+vars:pre-request {
+  api_version: v2
+  client_id: {{client_id}}
+}
+
+script:pre-request {
+  // Set request timestamp
+  req.setHeader('X-Timestamp', Date.now().toString());
+}
+
+script:post-response {
+  // Log response time
+  console.log('Response time:', res.responseTime, 'ms');
+}
+
+tests {
+  test("Response is successful", function() {
+    expect(res.status).to.be.at.least(200);
+    expect(res.status).to.be.below(300);
+  });
+}
+
+docs {
+  # My API Collection
+  
+  This collection contains all endpoints for the Example API.
+  
+  ## Authentication
+  Uses Bearer token authentication. Set `access_token` in your environment.
+  
+  ## Rate Limiting
+  Rate limit: 1000 requests per hour
+}
+```
+
+## Inheritance Hierarchy
+
+Bruno follows this inheritance hierarchy:
+
+<Steps>
+  <Step title="Collection Level">
+    Settings in `collection.bru` apply to all requests.
+  </Step>
+  <Step title="Folder Level">
+    Folder settings override collection settings for requests in that folder.
+  </Step>
+  <Step title="Request Level">
+    Request-specific settings override both folder and collection settings.
+  </Step>
+</Steps>
+
+### Inheritance Behavior by Setting Type
+
+<Tabs>
+  <Tab title="Headers">
+    **Additive**: Collection headers + Folder headers + Request headers
+    
+    Duplicate headers are overridden (request > folder > collection)
+  </Tab>
+  <Tab title="Auth">
+    **Override**: Requests using "Inherit" use folder/collection auth. Other auth modes replace it entirely.
+  </Tab>
+  <Tab title="Scripts">
+    **Sequential**: Collection scripts → Folder scripts → Request scripts (all run in order)
+  </Tab>
+  <Tab title="Tests">
+    **Cumulative**: Collection tests + Folder tests + Request tests (all run)
+  </Tab>
+  <Tab title="Variables">
+    **Override**: Request variables override folder/collection variables with same name
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Collection Auth">
+    Configure auth once at the collection level and use "Inherit" in requests to avoid duplication.
+  </Accordion>
+  <Accordion title="Set Common Headers">
+    Put headers that apply to all requests (API version, user agent) at the collection level.
+  </Accordion>
+  <Accordion title="Leverage Collection Scripts">
+    Use collection scripts for token refresh, request signing, or logging that applies globally.
+  </Accordion>
+  <Accordion title="Document Your Collection">
+    Use the docs section to provide context, auth requirements, and usage guidelines.
+  </Accordion>
+  <Accordion title="Test Common Behavior">
+    Use collection-level tests for response time, status codes, and header validations that apply everywhere.
+  </Accordion>
+  <Accordion title="Environment-Specific Settings">
+    Use `{{variables}}` in collection settings and configure them per environment.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/desktop/authentication">
+    Configure collection-level authentication
+  </Card>
+  <Card title="Scripts" icon="file-code" href="/desktop/scripts">
+    Write collection-level scripts
+  </Card>
+  <Card title="Tests" icon="flask" href="/desktop/tests">
+    Create collection-level tests
+  </Card>
+  <Card title="Environments" icon="layer-group" href="/concepts/environments">
+    Manage environment variables
+  </Card>
+</CardGroup>

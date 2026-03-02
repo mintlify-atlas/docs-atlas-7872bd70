@@ -1,0 +1,351 @@
+---
+title: 'bru import'
+description: 'Import collections from OpenAPI and WSDL formats into Bruno'
+---
+
+The `bru import` command converts API specifications from other formats (OpenAPI, WSDL) into Bruno collections, making it easy to migrate existing API documentation or create collections from API specs.
+
+## Synopsis
+
+```bash
+bru import <type> [options]
+```
+
+## Arguments
+
+<ParamField path="type" type="string" required>
+  Type of collection to import. Supported values:
+  - `openapi` - Import from OpenAPI/Swagger specification (JSON or YAML)
+  - `wsdl` - Import from WSDL (Web Services Description Language)
+</ParamField>
+
+## Options
+
+### Source
+
+<ParamField path="-s, --source" type="string" required>
+  Path to the source file or URL. Supports:
+  - Local file paths (absolute or relative)
+  - HTTP/HTTPS URLs
+  - For OpenAPI: `.json`, `.yml`, or `.yaml` files
+  - For WSDL: `.wsdl` or `.xml` files
+  
+  Examples:
+  - `--source api.yml`
+  - `--source https://example.com/api-spec.json`
+</ParamField>
+
+### Output
+
+<ParamField path="-o, --output" type="string">
+  Path to the output directory where the Bruno collection will be created.
+  
+  - If the path is an existing directory, a new subdirectory will be created using the collection name
+  - If the path doesn't exist, it will be created as the collection directory
+  - The parent directory must exist
+  
+  Conflicts with `--output-file`.
+  
+  Example: `--output ~/Desktop/my-collection`
+</ParamField>
+
+<ParamField path="-f, --output-file" type="string">
+  Path to the output JSON file. Instead of creating a Bruno collection directory structure, this exports the collection as a single JSON file.
+  
+  Conflicts with `--output`.
+  
+  Example: `--output-file ~/Desktop/my-collection.json`
+</ParamField>
+
+<Note>
+You must specify either `--output` or `--output-file`, but not both.
+</Note>
+
+### Collection Configuration
+
+<ParamField path="-n, --collection-name" type="string">
+  Name for the imported collection. If not specified, the collection name is derived from:
+  - The OpenAPI spec's `info.title` field
+  - The WSDL service name
+  - The source filename
+  
+  Example: `--collection-name "My API"`
+</ParamField>
+
+<ParamField path="--collection-format" type="string" default="opencollection">
+  Format of the imported collection files. Available formats:
+  - `opencollection` - Uses YAML format (.yml files) for the collection structure
+  - `bru` - Uses Bruno's native .bru format
+  
+  Example: `--collection-format bru`
+</ParamField>
+
+### OpenAPI-Specific Options
+
+<ParamField path="-g, --group-by" type="string" default="tags">
+  How to group the imported requests. Only applicable for OpenAPI imports.
+  
+  Available options:
+  - `tags` - Group requests by OpenAPI tags (default)
+  - `path` - Group requests by URL path structure
+  
+  Example: `--group-by path`
+</ParamField>
+
+### Network & Security
+
+<ParamField path="--insecure" type="boolean" default="false">
+  Skip SSL certificate verification when fetching from URLs. Useful when importing from servers with self-signed certificates.
+  
+  <Warning>
+  Use with caution. Only use this option when importing from trusted sources.
+  </Warning>
+  
+  Example: `--source https://self-signed.example.com/api.json --insecure`
+</ParamField>
+
+## Exit Codes
+
+<ResponseField name="0" type="Success">
+  Import successful - collection created or JSON file written
+</ResponseField>
+
+<ResponseField name="1" type="Error">
+  Import failed due to one of the following reasons:
+  - Unsupported import type
+  - Missing required options (source, output, or output-file)
+  - Source file or URL not found
+  - Failed to parse the specification
+  - Invalid specification format
+  - Output directory does not exist
+  - Output directory is not empty
+  - Network error when fetching from URL
+  - SSL certificate error
+</ResponseField>
+
+## Examples
+
+### OpenAPI Import
+
+#### Basic Import from Local File
+
+Import from a local OpenAPI YAML file:
+```bash
+bru import openapi --source api.yml --output ~/Desktop/my-collection --collection-name "My API"
+```
+
+Using short aliases:
+```bash
+bru import openapi -s api.yml -o ~/Desktop/my-collection -n "My API"
+```
+
+#### Import from URL
+
+Import from a remote OpenAPI specification:
+```bash
+bru import openapi --source https://example.com/api-spec.json --output ~/Desktop --collection-name "Remote API"
+```
+
+Import from URL with self-signed certificate:
+```bash
+bru import openapi --source https://self-signed.example.com/api.json --insecure --output ~/Desktop
+```
+
+#### Export as JSON
+
+Export the imported collection as a single JSON file:
+```bash
+bru import openapi --source api.yml --output-file ~/Desktop/my-collection.json --collection-name "My API"
+```
+
+Short form:
+```bash
+bru import openapi -s api.yml -f ~/Desktop/my-collection.json -n "My API"
+```
+
+#### Grouping Options
+
+Group requests by OpenAPI tags (default):
+```bash
+bru import openapi --source api.yml --output ~/Desktop/my-collection --group-by tags
+```
+
+Group requests by URL path structure:
+```bash
+bru import openapi --source api.yml --output ~/Desktop/my-collection --group-by path
+```
+
+Short form:
+```bash
+bru import openapi -s api.yml -o ~/Desktop/my-collection -g path
+```
+
+#### Collection Format
+
+Import as Bruno native format:
+```bash
+bru import openapi --source api.yml --output ~/Desktop/my-collection --collection-format bru
+```
+
+Import as OpenCollection format (YAML):
+```bash
+bru import openapi --source api.yml --output ~/Desktop/my-collection --collection-format opencollection
+```
+
+### WSDL Import
+
+#### Basic Import from Local File
+
+Import from a local WSDL file:
+```bash
+bru import wsdl --source service.wsdl --output ~/Desktop/soap-collection --collection-name "SOAP Service"
+```
+
+Short form:
+```bash
+bru import wsdl -s service.wsdl -o ~/Desktop/soap-collection -n "SOAP Service"
+```
+
+#### Import from URL
+
+Import from a remote WSDL:
+```bash
+bru import wsdl --source https://example.com/service.wsdl --output ~/Desktop --collection-name "Remote SOAP Service"
+```
+
+Short form:
+```bash
+bru import wsdl -s https://example.com/service.wsdl -o ~/Desktop -n "Remote SOAP Service"
+```
+
+## Understanding OpenAPI Grouping
+
+### Group by Tags (Default)
+
+When using `--group-by tags`, the importer creates folders based on OpenAPI tags:
+
+```yaml
+openapi: 3.0.0
+paths:
+  /users:
+    get:
+      tags: [Users]
+  /products:
+    get:
+      tags: [Products]
+```
+
+Results in:
+```
+my-collection/
+├── Users/
+│   └── Get Users.bru
+└── Products/
+    └── Get Products.bru
+```
+
+### Group by Path
+
+When using `--group-by path`, the importer creates folders based on URL structure:
+
+```yaml
+openapi: 3.0.0
+paths:
+  /api/v1/users:
+    get: ...
+  /api/v1/products:
+    get: ...
+```
+
+Results in:
+```
+my-collection/
+└── api/
+    └── v1/
+        ├── users/
+        │   └── Get Users.bru
+        └── products/
+            └── Get Products.bru
+```
+
+## Collection Formats
+
+### OpenCollection Format (YAML)
+
+The `opencollection` format uses YAML files:
+```
+my-collection/
+├── bruno.yml          # Collection metadata
+├── request1.yml       # Request definition
+└── folder/
+    └── request2.yml
+```
+
+### Bruno Native Format
+
+The `bru` format uses Bruno's native .bru files:
+```
+my-collection/
+├── bruno.json         # Collection metadata
+├── request1.bru       # Request in .bru format
+└── folder/
+    └── request2.bru
+```
+
+## Error Handling
+
+### Common Errors
+
+**Source not found:**
+```bash
+Error: File does not exist: api.yml
+```
+Solution: Check the file path or URL.
+
+**Network errors:**
+```bash
+Error: No response received from server. Check the URL and your network connection.
+```
+Solution: Verify the URL is accessible and your network connection is working.
+
+**SSL certificate errors:**
+```bash
+Error: SSL Certificate error: DEPTH_ZERO_SELF_SIGNED_CERT. Try using --insecure if you trust this source.
+```
+Solution: Use the `--insecure` flag if you trust the source.
+
+**Invalid specification:**
+```bash
+Error: Failed to parse content as JSON or YAML
+```
+Solution: Verify the specification file is valid JSON or YAML.
+
+**Output directory issues:**
+```bash
+Error: Parent directory does not exist: /invalid/path
+```
+Solution: Ensure the parent directory exists before running the import.
+
+**Directory not empty:**
+```bash
+Error: Output directory is not empty: ~/Desktop/my-collection
+```
+Solution: Choose a different output path or clear the existing directory.
+
+## Network Timeouts
+
+When importing from URLs, the command has a 30-second timeout. If the source is large or the network is slow, the import may fail:
+
+```bash
+Error: Request timed out. The server took too long to respond.
+```
+
+In this case, download the specification file locally and import from the file:
+```bash
+curl -o api.yml https://example.com/api-spec.yml
+bru import openapi --source api.yml --output ~/Desktop/my-collection
+```
+
+## Size Limits
+
+The importer has a maximum content length limit of 10 MB for URL imports. For larger specifications, download the file locally first.

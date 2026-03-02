@@ -1,0 +1,644 @@
+---
+title: Test & Assertion API
+description: API reference for writing tests and assertions in Bruno
+---
+
+Bruno provides two ways to validate HTTP responses:
+
+1. **Declarative assertions** - Simple assertions in the `assert` block
+2. **Test scripts** - JavaScript test functions in the `tests` block
+
+## Declarative Assertions
+
+The `assert` block provides a simple, declarative syntax for common assertions:
+
+```
+assert {
+  res.status: eq 200
+  res.body.userId: isDefined
+  res.body.email: contains @example.com
+}
+```
+
+### Assertion Operators
+
+Assertions use the format: `expression: operator value`
+
+#### Comparison Operators
+
+<ParamField path="eq" type="operator">
+  Equal to (default if no operator specified)
+  
+  ```
+  res.status: eq 200
+  res.body.name: eq John
+  res.body.name: John  // eq is optional
+  ```
+</ParamField>
+
+<ParamField path="neq" type="operator">
+  Not equal to
+  
+  ```
+  res.status: neq 404
+  res.body.error: neq null
+  ```
+</ParamField>
+
+<ParamField path="gt" type="operator">
+  Greater than
+  
+  ```
+  res.body.count: gt 0
+  res.body.age: gt 18
+  ```
+</ParamField>
+
+<ParamField path="gte" type="operator">
+  Greater than or equal to
+  
+  ```
+  res.body.score: gte 100
+  ```
+</ParamField>
+
+<ParamField path="lt" type="operator">
+  Less than
+  
+  ```
+  res.responseTime: lt 1000
+  res.body.price: lt 99.99
+  ```
+</ParamField>
+
+<ParamField path="lte" type="operator">
+  Less than or equal to
+  
+  ```
+  res.body.quantity: lte 100
+  ```
+</ParamField>
+
+#### Collection Operators
+
+<ParamField path="in" type="operator">
+  Value is in array
+  
+  ```
+  res.body.status: in active,pending,completed
+  res.body.status: in [active, pending, completed]  // Also valid
+  ```
+</ParamField>
+
+<ParamField path="notIn" type="operator">
+  Value is not in array
+  
+  ```
+  res.body.status: notIn failed,error
+  ```
+</ParamField>
+
+<ParamField path="contains" type="operator">
+  String/array contains value
+  
+  ```
+  res.body.email: contains @example.com
+  res.body.tags: contains javascript
+  ```
+</ParamField>
+
+<ParamField path="notContains" type="operator">
+  String/array does not contain value
+  
+  ```
+  res.body.message: notContains error
+  ```
+</ParamField>
+
+#### String Operators
+
+<ParamField path="startsWith" type="operator">
+  String starts with value
+  
+  ```
+  res.body.url: startsWith https://
+  res.body.name: startsWith Mr.
+  ```
+</ParamField>
+
+<ParamField path="endsWith" type="operator">
+  String ends with value
+  
+  ```
+  res.body.email: endsWith @example.com
+  res.body.filename: endsWith .pdf
+  ```
+</ParamField>
+
+<ParamField path="matches" type="operator">
+  Matches regular expression
+  
+  ```
+  res.body.email: matches ^[a-z]+@[a-z]+\\.[a-z]+$
+  res.body.email: matches /^[a-z]+@/  // Slashes optional
+  res.body.phone: matches ^\\d{3}-\\d{3}-\\d{4}$
+  ```
+</ParamField>
+
+<ParamField path="notMatches" type="operator">
+  Does not match regular expression
+  
+  ```
+  res.body.username: notMatches [^a-zA-Z0-9]
+  ```
+</ParamField>
+
+#### Size/Length Operators
+
+<ParamField path="length" type="operator">
+  Array/string has exact length
+  
+  ```
+  res.body.items: length 10
+  res.body.username: length 8
+  ```
+</ParamField>
+
+<ParamField path="between" type="operator">
+  Value is between two numbers (inclusive)
+  
+  ```
+  res.body.age: between 18, 65
+  res.responseTime: between 100, 500
+  ```
+</ParamField>
+
+#### State Operators (Unary)
+
+These operators don't require a value:
+
+<ParamField path="isEmpty" type="operator">
+  Value is empty (array, string, or object)
+  
+  ```
+  res.body.errors: isEmpty
+  res.body.message: isEmpty
+  ```
+</ParamField>
+
+<ParamField path="isNotEmpty" type="operator">
+  Value is not empty
+  
+  ```
+  res.body.items: isNotEmpty
+  ```
+</ParamField>
+
+<ParamField path="isNull" type="operator">
+  Value is null
+  
+  ```
+  res.body.deletedAt: isNull
+  ```
+</ParamField>
+
+<ParamField path="isUndefined" type="operator">
+  Value is undefined
+  
+  ```
+  res.body.optionalField: isUndefined
+  ```
+</ParamField>
+
+<ParamField path="isDefined" type="operator">
+  Value is defined (not undefined)
+  
+  ```
+  res.body.userId: isDefined
+  res.body.email: isDefined
+  ```
+</ParamField>
+
+<ParamField path="isTruthy" type="operator">
+  Value is truthy
+  
+  ```
+  res.body.isActive: isTruthy
+  ```
+</ParamField>
+
+<ParamField path="isFalsy" type="operator">
+  Value is falsy
+  
+  ```
+  res.body.isDeleted: isFalsy
+  ```
+</ParamField>
+
+#### Type Operators (Unary)
+
+<ParamField path="isJson" type="operator">
+  Value is a JSON object
+  
+  ```
+  res.body.metadata: isJson
+  ```
+</ParamField>
+
+<ParamField path="isNumber" type="operator">
+  Value is a number
+  
+  ```
+  res.body.age: isNumber
+  res.body.price: isNumber
+  ```
+</ParamField>
+
+<ParamField path="isString" type="operator">
+  Value is a string
+  
+  ```
+  res.body.name: isString
+  ```
+</ParamField>
+
+<ParamField path="isBoolean" type="operator">
+  Value is a boolean
+  
+  ```
+  res.body.isActive: isBoolean
+  ```
+</ParamField>
+
+<ParamField path="isArray" type="operator">
+  Value is an array
+  
+  ```
+  res.body.items: isArray
+  ```
+</ParamField>
+
+### Assertion Examples
+
+```
+assert {
+  // Status assertions
+  res.status: eq 200
+  res.statusText: eq OK
+  
+  // Response time
+  res.responseTime: lt 1000
+  
+  // Header assertions
+  res.headers['content-type']: contains application/json
+  
+  // Body assertions
+  res.body.success: eq true
+  res.body.userId: isDefined
+  res.body.userId: isNumber
+  res.body.email: matches ^[^@]+@[^@]+\\.[^@]+$
+  res.body.items: isArray
+  res.body.items: isNotEmpty
+  res.body.items: length 10
+  res.body.status: in active,pending
+  
+  // Nested properties
+  res.body.user.name: eq John Doe
+  res.body.user.age: gt 18
+  res.body.user.email: endsWith @example.com
+  
+  // Array elements
+  res.body.items[0].id: isDefined
+  res.body.items[0].title: isString
+}
+```
+
+## Test Scripts
+
+For more complex validations, use the `tests` block with JavaScript:
+
+```javascript
+tests {
+  test("description", function() {
+    // Test code with assertions
+  });
+}
+```
+
+### Test Function
+
+<ParamField path="test(description, callback)" type="function">
+  Defines a test case
+  
+  **Parameters:**
+  - `description` (string) - Test description
+  - `callback` (function) - Test function (can be async)
+  
+  ```javascript
+  test("should return valid user data", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('userId');
+    expect(body.userId).to.be.a('number');
+  });
+  
+  // Async test
+  test("should validate async operation", async function() {
+    await someAsyncOperation();
+    expect(result).to.be.true;
+  });
+  ```
+</ParamField>
+
+### Chai Assertions
+
+Bruno includes the Chai assertion library with BDD-style assertions.
+
+#### Expect API
+
+The `expect` function is the primary assertion method:
+
+<CodeGroup>
+
+```javascript Equality
+test("equality assertions", function() {
+  expect(res.getStatus()).to.equal(200);
+  expect(res.getBody().name).to.equal('John');
+  expect(res.getBody()).to.deep.equal({ userId: 1, name: 'John' });
+  expect(res.getStatus()).to.not.equal(404);
+});
+```
+
+```javascript Type Checking
+test("type assertions", function() {
+  expect(res.getBody().userId).to.be.a('number');
+  expect(res.getBody().name).to.be.a('string');
+  expect(res.getBody().items).to.be.an('array');
+  expect(res.getBody().metadata).to.be.an('object');
+  expect(res.getBody().isActive).to.be.a('boolean');
+});
+```
+
+```javascript Existence
+test("existence assertions", function() {
+  expect(res.getBody().userId).to.exist;
+  expect(res.getBody().deletedAt).to.not.exist;
+  expect(res.getBody().optionalField).to.be.undefined;
+  expect(res.getBody().nullableField).to.be.null;
+});
+```
+
+```javascript Properties
+test("property assertions", function() {
+  expect(res.getBody()).to.have.property('userId');
+  expect(res.getBody()).to.have.property('userId', 123);
+  expect(res.getBody()).to.have.all.keys('userId', 'name', 'email');
+  expect(res.getBody()).to.include.keys('userId', 'name');
+});
+```
+
+```javascript Arrays & Strings
+test("collection assertions", function() {
+  // Arrays
+  expect(res.getBody().items).to.have.lengthOf(10);
+  expect(res.getBody().items).to.include('item1');
+  expect(res.getBody().tags).to.be.empty;
+  expect(res.getBody().items).to.not.be.empty;
+  
+  // Strings
+  expect(res.getBody().email).to.have.lengthOf(20);
+  expect(res.getBody().message).to.include('success');
+  expect(res.getBody().url).to.startWith('https://');
+  expect(res.getBody().email).to.endWith('@example.com');
+});
+```
+
+```javascript Numbers
+test("numeric assertions", function() {
+  expect(res.getBody().age).to.be.greaterThan(18);
+  expect(res.getBody().age).to.be.at.least(18);
+  expect(res.getBody().age).to.be.lessThan(100);
+  expect(res.getBody().age).to.be.at.most(65);
+  expect(res.getBody().score).to.be.within(0, 100);
+});
+```
+
+```javascript Booleans
+test("boolean assertions", function() {
+  expect(res.getBody().isActive).to.be.true;
+  expect(res.getBody().isDeleted).to.be.false;
+  expect(res.getBody().success).to.be.ok;
+  expect(res.getBody().error).to.not.be.ok;
+});
+```
+
+```javascript Regex
+test("regex assertions", function() {
+  expect(res.getBody().email).to.match(/^[^@]+@[^@]+$/);
+  expect(res.getBody().phone).to.match(/^\d{3}-\d{3}-\d{4}$/);
+  expect(res.getBody().username).to.not.match(/[^a-zA-Z0-9]/);
+});
+```
+
+```javascript JSON
+test("JSON assertions", function() {
+  // Custom .json assertion
+  expect(res.getBody().metadata).to.be.json;
+  expect(res.getBody().settings).to.be.json;
+});
+```
+
+</CodeGroup>
+
+#### Assert API
+
+Alternatively, use the `assert` style:
+
+```javascript
+test("using assert style", function() {
+  assert.equal(res.getStatus(), 200);
+  assert.isNumber(res.getBody().userId);
+  assert.isString(res.getBody().name);
+  assert.isArray(res.getBody().items);
+  assert.isTrue(res.getBody().success);
+  assert.isDefined(res.getBody().userId);
+  assert.isNull(res.getBody().deletedAt);
+});
+```
+
+### Chaining Assertions
+
+Chain multiple assertions for better readability:
+
+```javascript
+test("chained assertions", function() {
+  expect(res.getBody().items)
+    .to.be.an('array')
+    .that.is.not.empty
+    .and.has.lengthOf(10);
+  
+  expect(res.getBody().user)
+    .to.have.property('name')
+    .that.is.a('string')
+    .and.equals('John Doe');
+});
+```
+
+## Common Test Patterns
+
+### Status Code Validation
+
+```javascript
+tests {
+  test("should return 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("should be successful status", function() {
+    expect(res.getStatus()).to.be.within(200, 299);
+  });
+}
+```
+
+### Response Body Validation
+
+```javascript
+tests {
+  test("should return user object", function() {
+    const body = res.getBody();
+    
+    expect(body).to.have.all.keys('userId', 'name', 'email', 'createdAt');
+    expect(body.userId).to.be.a('number');
+    expect(body.name).to.be.a('string').and.not.be.empty;
+    expect(body.email).to.match(/^[^@]+@[^@]+\.[^@]+$/);
+  });
+}
+```
+
+### Array Validation
+
+```javascript
+tests {
+  test("should return array of items", function() {
+    const items = res.getBody().items;
+    
+    expect(items).to.be.an('array');
+    expect(items).to.have.lengthOf.at.least(1);
+    
+    // Validate first item
+    expect(items[0]).to.have.property('id');
+    expect(items[0]).to.have.property('title');
+    
+    // Validate all items
+    items.forEach(item => {
+      expect(item.id).to.be.a('number');
+      expect(item.title).to.be.a('string');
+    });
+  });
+}
+```
+
+### Header Validation
+
+```javascript
+tests {
+  test("should have correct headers", function() {
+    const headers = res.getHeaders();
+    
+    expect(headers).to.have.property('content-type');
+    expect(headers['content-type']).to.include('application/json');
+    expect(res.getHeader('x-rate-limit-remaining')).to.be.a('string');
+  });
+}
+```
+
+### Response Time Validation
+
+```javascript
+tests {
+  test("should respond quickly", function() {
+    expect(res.getResponseTime()).to.be.lessThan(1000);
+  });
+}
+```
+
+### JWT Token Validation
+
+```javascript
+tests {
+  const atob = require('atob');
+  
+  test("should return valid JWT", function() {
+    const token = res.getBody().token;
+    expect(token).to.be.a('string');
+    
+    const parts = token.split('.');
+    expect(parts).to.have.lengthOf(3);
+    
+    // Decode and validate payload
+    const payload = JSON.parse(atob(parts[1]));
+    expect(payload).to.have.property('userId');
+    expect(payload).to.have.property('exp');
+    expect(payload.exp).to.be.greaterThan(Date.now() / 1000);
+  });
+}
+```
+
+### Schema Validation
+
+```javascript
+tests {
+  const tv4 = require('tv4');
+  
+  test("should match schema", function() {
+    const schema = {
+      type: 'object',
+      required: ['userId', 'name', 'email'],
+      properties: {
+        userId: { type: 'number' },
+        name: { type: 'string' },
+        email: { type: 'string', format: 'email' }
+      }
+    };
+    
+    const valid = tv4.validate(res.getBody(), schema);
+    expect(valid).to.be.true;
+    
+    if (!valid) {
+      console.error('Validation error:', tv4.error);
+    }
+  });
+}
+```
+
+## Combining Assertions and Tests
+
+You can use both declarative assertions and test scripts together:
+
+```
+assert {
+  res.status: eq 200
+  res.body.userId: isDefined
+}
+
+tests {
+  test("should have valid email format", function() {
+    expect(res.getBody().email).to.match(/^[^@]+@[^@]+$/);
+  });
+  
+  test("should have future expiration", function() {
+    const expiresAt = new Date(res.getBody().expiresAt);
+    expect(expiresAt).to.be.greaterThan(new Date());
+  });
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Pre-request Scripts" icon="arrow-right" href="/api/scripting/pre-request">
+    Modify requests before sending
+  </Card>
+  <Card title="Post-response Scripts" icon="arrow-left" href="/api/scripting/post-response">
+    Process responses and extract data
+  </Card>
+</CardGroup>

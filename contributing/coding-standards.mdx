@@ -1,0 +1,495 @@
+---
+title: Coding Standards
+description: Coding guidelines and best practices for Bruno contributors
+---
+
+## General Principles
+
+<Warning>
+No diffs unless an actual change is made. Code changes need to be as minimal as possible. Avoid making unnecessary whitespace diffs.
+</Warning>
+
+Ensure you check your code changes before committing and raising a PR. While ESLint handles most formatting, always review your diffs.
+
+## Style Rules
+
+### Indentation and Spacing
+
+<CodeGroup>
+```javascript Good - 2 Spaces
+function calculateTotal(items) {
+  return items.reduce((sum, item) => {
+    return sum + item.price;
+  }, 0);
+}
+```
+
+```javascript Bad - Tabs or 4 Spaces
+function calculateTotal(items) {
+    return items.reduce((sum, item) => {
+        return sum + item.price;
+    }, 0);
+}
+```
+</CodeGroup>
+
+<Note>
+**Use 2 spaces for indentation.** No tabs, just spaces – keeps everything neat and uniform.
+</Note>
+
+### Quotes and Semicolons
+
+<CodeGroup>
+```javascript Good - Single Quotes + Semicolons
+const message = 'Hello, world!';
+const name = 'Bruno';
+const url = 'https://usebruno.com';
+```
+
+```jsx JSX Attributes - Double Quotes
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
+</svg>
+```
+
+```javascript Bad - Missing Semicolons
+const message = "Hello, world"
+const name = "Bruno"
+```
+</CodeGroup>
+
+**Rules:**
+- Stick to **single quotes** for strings in JavaScript
+- Use **double quotes** for JSX/TSX attributes (React convention)
+- Always add **semicolons** at the end of statements
+
+### Arrow Functions
+
+<CodeGroup>
+```javascript Good - Parentheses Always
+const double = (x) => x * 2;
+const sum = (a, b) => a + b;
+const greet = (name) => `Hello, ${name}!`;
+```
+
+```javascript Bad - Missing Parentheses
+const double = x => x * 2;
+const greet = name => `Hello, ${name}!`;
+```
+</CodeGroup>
+
+<Note>
+**Always use parentheses** around parameters in arrow functions, even for single params. Consistency is key.
+</Note>
+
+### Braces and Line Breaks
+
+<CodeGroup>
+```javascript Good - Opening Brace Same Line
+if (isValid) {
+  processRequest();
+}
+
+const config = {
+  url: 'https://api.example.com',
+  method: 'GET'
+};
+```
+
+```javascript Good - Multiline Arrays
+const items = [
+  'first',
+  'second'
+];
+```
+
+```javascript Bad - Opening Brace New Line
+if (isValid)
+{
+  processRequest();
+}
+```
+</CodeGroup>
+
+**Rules:**
+- Put **opening braces on the same line**
+- Minimum **2 elements** for multiline constructs
+- No newlines inside function parentheses
+- Space **before and after** the arrow: `() => {}`
+- No space between function name and parentheses: `func()` not `func ()`
+
+### Trailing Commas
+
+<CodeGroup>
+```javascript Good - No Trailing Commas
+const user = {
+  name: 'John',
+  email: 'john@example.com'
+};
+
+const colors = [
+  'red',
+  'blue',
+  'green'
+];
+```
+
+```javascript Bad - Trailing Commas
+const user = {
+  name: 'John',
+  email: 'john@example.com',
+};
+```
+</CodeGroup>
+
+<Note>
+**No trailing commas.** Keep it clean, no extra commas hanging around.
+</Note>
+
+## React Guidelines
+
+### Hook Imports
+
+<CodeGroup>
+```javascript Good - Direct Imports
+import { useState, useEffect, useCallback, useMemo } from 'react';
+
+function MyComponent() {
+  const [count, setCount] = useState(0);
+  const increment = useCallback(() => setCount((c) => c + 1), []);
+  
+  return <button onClick={increment}>{count}</button>;
+}
+```
+
+```javascript Bad - Namespace Access
+import * as React from 'react';
+
+function MyComponent() {
+  const [count, setCount] = React.useState(0);
+  const increment = React.useCallback(() => setCount((c) => c + 1), []);
+  
+  return <button onClick={increment}>{count}</button>;
+}
+```
+</CodeGroup>
+
+<Warning>
+**MUST:** Do not use namespace access for hooks in app code (e.g., `React.useCallback`, `React.useState`). Import hooks directly.
+</Warning>
+
+### Custom Hooks for Logic
+
+<CodeGroup>
+```javascript Good - Custom Hook
+// hooks/useApiRequest.js
+import { useState, useCallback } from 'react';
+
+export function useApiRequest() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  const execute = useCallback(async (url) => {
+    setLoading(true);
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  return { loading, error, execute };
+}
+
+// Component.js
+function RequestButton() {
+  const { loading, error, execute } = useApiRequest();
+  
+  return (
+    <button onClick={() => execute('/api/data')}>
+      {loading ? 'Loading...' : 'Fetch Data'}
+    </button>
+  );
+}
+```
+</CodeGroup>
+
+**Best Practices:**
+- **MUST:** Prefer custom hooks for business logic, data fetching, and side-effects
+- **MUST:** Avoid `useEffect` unless absolutely needed. Prefer derived state and event handlers
+- **SHOULD:** Memoize only when necessary (`useMemo`/`useCallback`), prefer moving logic into hooks first
+
+### Styled Components vs Tailwind
+
+<CodeGroup>
+```javascript Good - Styled Components for Colors
+import styled from 'styled-components';
+
+const Button = styled.button`
+  background-color: ${(props) => props.theme.colors.primary};
+  color: ${(props) => props.theme.colors.text};
+  border: 1px solid ${(props) => props.theme.colors.border};
+  
+  &:hover {
+    background-color: ${(props) => props.theme.colors.primaryHover};
+  }
+`;
+
+// Use Tailwind for layout
+<Button className="px-4 py-2 rounded-md flex items-center gap-2">
+  Submit
+</Button>
+```
+
+```javascript Bad - Tailwind for Colors
+// Don't do this - colors should use theme
+<button className="bg-blue-500 text-white border-gray-300">
+  Submit
+</button>
+```
+</CodeGroup>
+
+**Rules:**
+- Use **styled component's theme prop** for CSS colors, not CSS variables
+- **Styled Components** define both self and children component styles
+- **Tailwind classes** are used specifically for layout-based styles
+- Styled Component CSS might also change layout, but **Tailwind classes shouldn't define colors**
+
+### Testing Attributes
+
+```jsx
+<button data-testid="submit-button" onClick={handleSubmit}>
+  Submit Request
+</button>
+
+<input data-testid="url-input" value={url} onChange={handleChange} />
+```
+
+<Note>
+Add `data-testid` to testable elements for Playwright E2E tests.
+</Note>
+
+### Component Organization
+
+- **Co-locate** utilities that are truly component-specific next to the component
+- Place **shared items** under a common folder
+- Keep components **focused and single-purpose**
+
+## Testing Standards
+
+### Test Philosophy
+
+<CardGroup cols={2}>
+  <Card title="Behavior-Driven" icon="check">
+    Test real expected output and observable behavior, not internal implementation
+  </Card>
+  <Card title="High-Value Focus" icon="target">
+    Prioritize critical, complex, or likely-to-break behavior over coverage numbers
+  </Card>
+  <Card title="Minimize Mocking" icon="ban">
+    Use real flows where practical; mock only external services or non-deterministic behavior
+  </Card>
+  <Card title="Readable Tests" icon="book">
+    Optimize for clarity over cleverness with descriptive names and minimal setup
+  </Card>
+</CardGroup>
+
+### Test Requirements
+
+<Steps>
+  <Step title="Add Tests for Changes">
+    Add tests for any new functionality or meaningful changes. If code is added, removed, or significantly modified, corresponding tests should be updated or created.
+  </Step>
+  
+  <Step title="Cover Key Paths">
+    Cover both the "happy path" and realistically problematic paths. Validate expected success behavior and error handling.
+  </Step>
+  
+  <Step title="Ensure Determinism">
+    Ensure tests are **deterministic and reproducible**. No randomness, timing dependencies, or environment-specific assumptions without explicit control.
+  </Step>
+  
+  <Step title="Make Failures Useful">
+    Aim for tests that **fail usefully**. When a test fails, it should clearly indicate what behavior broke and why.
+  </Step>
+</Steps>
+
+### Test Examples
+
+<CodeGroup>
+```javascript Good - Behavior Test
+test('should parse valid Bru request format', () => {
+  const bruContent = `
+    get {
+      url: https://api.example.com/users
+    }
+  `;
+  
+  const result = parseBru(bruContent);
+  
+  expect(result.method).toBe('GET');
+  expect(result.url).toBe('https://api.example.com/users');
+});
+
+test('should handle invalid URL gracefully', () => {
+  const bruContent = `
+    get {
+      url: not-a-valid-url
+    }
+  `;
+  
+  expect(() => parseBru(bruContent)).toThrow('Invalid URL');
+});
+```
+
+```javascript Bad - Implementation Test
+test('should call parseUrl internally', () => {
+  const parseUrlSpy = jest.spyOn(parser, 'parseUrl');
+  parseBru('get { url: https://api.com }');
+  expect(parseUrlSpy).toHaveBeenCalled();
+});
+```
+</CodeGroup>
+
+**Key Points:**
+- Write **behavior-driven tests**, not implementation-driven ones
+- **Minimize mocking** unless it meaningfully increases clarity
+- Keep tests **readable and maintainable**
+- Avoid **overfitting tests** to current behavior
+- Use **consistent patterns** and helper utilities
+- Tests should be **fast enough** to run continuously
+
+## Code Quality
+
+### Readability and Abstractions
+
+<Warning>
+Avoid abstractions unless the **exact same code** is being used in **more than 3 places**.
+</Warning>
+
+<CodeGroup>
+```javascript Good - Clear Function Name
+/**
+ * Converts a Bru collection to Postman format
+ * @param {Object} bruCollection - The Bruno collection object
+ * @returns {Object} Postman collection format
+ */
+function convertBruToPostman(bruCollection) {
+  // Implementation
+}
+```
+
+```javascript Bad - Single Line Abstraction
+// Adds unnecessary function call
+function getUrl(request) {
+  return request.url;
+}
+
+// Just use request.url directly instead
+```
+</CodeGroup>
+
+**Guidelines:**
+- Function names need to be **concise and descriptive**
+- Add **JSDoc comments** to add more details to abstractions if needed
+- Follow **functional programming** but just enough to be readable
+- **Avoid single line abstractions** where all that's being done is increasing the call stack
+- Add **meaningful comments** instead of obvious ones where complex code flow needs explanation
+
+### Comments
+
+<CodeGroup>
+```javascript Good - Meaningful Comments
+// OAuth2 spec requires state parameter for CSRF protection
+// We generate a random state and store it to validate the callback
+const state = generateRandomState();
+storeOAuthState(state);
+
+// Parse the URL using a lenient parser because some APIs
+// return malformed Location headers that the strict parser rejects
+const redirectUrl = parseLenientUrl(response.headers.location);
+```
+
+```javascript Bad - Obvious Comments
+// Set the count to 0
+const count = 0;
+
+// Increment the counter
+count++;
+```
+</CodeGroup>
+
+<Note>
+Add meaningful comments that explain **why**, not **what**. The code already shows what it does.
+</Note>
+
+## Linting
+
+Bruno uses ESLint with custom configuration:
+
+```bash
+# Check for issues
+npm run lint
+
+# Auto-fix issues
+npm run lint:fix
+```
+
+### Pre-commit Hooks
+
+The project uses **Husky** and **nano-staged** to run linting on staged files:
+
+```json
+"nano-staged": {
+  "*.{js,ts,jsx}": [
+    "npm run lint:fix"
+  ]
+}
+```
+
+This automatically formats and lints your code before commits.
+
+## Code Review Checklist
+
+Before submitting a PR, ensure:
+
+- [ ] Code follows style guidelines (2 spaces, single quotes, semicolons)
+- [ ] React hooks are imported directly, not via namespace
+- [ ] Custom hooks used for business logic and side effects
+- [ ] Styled components for colors, Tailwind for layout
+- [ ] Tests added for new functionality
+- [ ] Tests are behavior-driven, not implementation-driven
+- [ ] No unnecessary abstractions or single-line wrappers
+- [ ] Function names are clear and descriptive
+- [ ] Comments explain "why", not "what"
+- [ ] `data-testid` added to testable UI elements
+- [ ] No trailing commas
+- [ ] No unnecessary whitespace changes
+- [ ] ESLint passes without errors
+
+## Enforcement
+
+These standards are enforced through:
+
+1. **ESLint**: Automated linting catches most issues
+2. **Pre-commit hooks**: Husky runs lint:fix before commits
+3. **CI/CD**: GitHub Actions runs tests and linting
+4. **Code review**: Maintainers review for adherence
+
+<Tip>
+Run `npm run lint:fix` before committing to automatically fix most style issues.
+</Tip>
+
+## Questions?
+
+If something doesn't fit perfectly or you're unsure about a guideline:
+
+- Ask in the PR comments
+- Open a discussion on GitHub
+- Join our Discord community
+
+**Remember:** These rules are here to make our codebase harmonious. Let's chat if you have questions!

@@ -1,0 +1,922 @@
+---
+title: Request File Format
+description: Complete specification for Bruno request .bru files
+---
+
+## Overview
+
+Request files define individual HTTP, GraphQL, gRPC, or WebSocket requests. Each request is stored as a `.bru` file within a collection directory.
+
+## File Structure
+
+A request file consists of multiple blocks that define different aspects of the request:
+
+```bru
+meta { ... }          # Request metadata (required)
+get/post/put { ... }  # HTTP method and URL (required)
+params:query { ... }  # Query parameters
+params:path { ... }   # Path parameters
+headers { ... }       # HTTP headers
+auth:* { ... }        # Authentication
+body:* { ... }        # Request body
+vars:* { ... }        # Variables
+assert { ... }        # Assertions
+script:* { ... }      # Scripts
+tests { ... }         # Test cases
+docs { ... }          # Documentation
+settings { ... }      # Request settings
+example { ... }       # Response examples
+```
+
+## Meta Block
+
+The `meta` block contains request metadata and is required in every request file.
+
+```bru
+meta {
+  name: Get User Profile
+  type: http
+  seq: 1
+  tags: [
+    users
+    profile
+    read
+  ]
+}
+```
+
+### Meta Fields
+
+<ParamField path="name" type="string" required>
+  Human-readable name for the request
+</ParamField>
+
+<ParamField path="type" type="string" required>
+  Request type: `http`, `graphql`, `grpc`, or `ws` (WebSocket)
+</ParamField>
+
+<ParamField path="seq" type="number">
+  Sequence number for ordering requests in the collection
+</ParamField>
+
+<ParamField path="tags" type="array">
+  List of tags for categorizing and filtering requests
+</ParamField>
+
+## HTTP Method Blocks
+
+One of these blocks is required and defines the HTTP method and URL.
+
+### GET Request
+
+```bru
+get {
+  url: https://api.example.com/users/{{userId}}
+  body: none
+  auth: bearer
+}
+```
+
+### POST Request
+
+```bru
+post {
+  url: https://api.example.com/users
+  body: json
+  auth: bearer
+}
+```
+
+### PUT Request
+
+```bru
+put {
+  url: https://api.example.com/users/{{userId}}
+  body: json
+  auth: bearer
+}
+```
+
+### DELETE Request
+
+```bru
+delete {
+  url: https://api.example.com/users/{{userId}}
+  body: none
+  auth: bearer
+}
+```
+
+### PATCH Request
+
+```bru
+patch {
+  url: https://api.example.com/users/{{userId}}
+  body: json
+  auth: bearer
+}
+```
+
+### Other HTTP Methods
+
+```bru
+options {
+  url: https://api.example.com/users
+  body: none
+  auth: none
+}
+
+head {
+  url: https://api.example.com/users
+  body: none
+  auth: none
+}
+```
+
+### Custom HTTP Method
+
+```bru
+http {
+  method: PURGE
+  url: https://api.example.com/cache
+  body: none
+  auth: apikey
+}
+```
+
+### Method Block Fields
+
+<ParamField path="url" type="string" required>
+  Request URL with optional variable interpolation
+</ParamField>
+
+<ParamField path="body" type="string">
+  Body type: `none`, `json`, `text`, `xml`, `form-urlencoded`, `multipart-form`, `graphql`, or `sparql`
+</ParamField>
+
+<ParamField path="auth" type="string">
+  Authentication mode: `none`, `basic`, `bearer`, `digest`, `awsv4`, `oauth2`, `wsse`, or `apikey`
+</ParamField>
+
+<ParamField path="method" type="string">
+  Only for `http` block - custom HTTP method name
+</ParamField>
+
+## Parameters
+
+### Query Parameters
+
+```bru
+params:query {
+  page: 1
+  limit: 20
+  sort: created_at
+  order: desc
+  ~debug: true
+}
+```
+
+<Info>
+  Query parameters are appended to the URL with `?` and `&` separators.
+</Info>
+
+### Path Parameters
+
+```bru
+params:path {
+  userId: 123
+  accountId: abc-456
+}
+```
+
+<Info>
+  Path parameters replace `:paramName` placeholders in the URL.
+</Info>
+
+### Parameters with Special Characters
+
+```bru
+params:query {
+  "key with spaces": value
+  "colon:param": value
+  "nested \"quotes\"": value
+  "{braces}": value
+}
+```
+
+## Headers
+
+```bru
+headers {
+  content-type: application/json
+  accept: application/json
+  authorization: Bearer {{token}}
+  x-api-key: {{apiKey}}
+  x-request-id: {{$uuid}}
+  ~x-debug: verbose
+}
+```
+
+### Common Headers
+
+<CodeGroup>
+
+```bru Content Type
+headers {
+  content-type: application/json
+}
+```
+
+```bru Authorization
+headers {
+  authorization: Bearer {{token}}
+}
+```
+
+```bru API Key
+headers {
+  x-api-key: {{apiKey}}
+}
+```
+
+```bru Custom Headers
+headers {
+  x-request-id: {{$uuid}}
+  x-correlation-id: {{correlationId}}
+  x-tenant-id: {{tenantId}}
+}
+```
+
+</CodeGroup>
+
+## Authentication
+
+### Basic Authentication
+
+```bru
+auth:basic {
+  username: admin
+  password: {{password}}
+}
+```
+
+<ParamField path="username" type="string" required>
+  Username for basic authentication
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  Password for basic authentication
+</ParamField>
+
+### Bearer Token
+
+```bru
+auth:bearer {
+  token: {{authToken}}
+}
+```
+
+<ParamField path="token" type="string" required>
+  Bearer token (typically JWT)
+</ParamField>
+
+### API Key
+
+```bru
+auth:apikey {
+  key: x-api-key
+  value: {{apiKey}}
+  placement: header
+}
+```
+
+<ParamField path="key" type="string" required>
+  Name of the API key parameter
+</ParamField>
+
+<ParamField path="value" type="string" required>
+  Value of the API key
+</ParamField>
+
+<ParamField path="placement" type="string" required>
+  Where to place the key: `header` or `query`
+</ParamField>
+
+### Digest Authentication
+
+```bru
+auth:digest {
+  username: user
+  password: {{password}}
+}
+```
+
+### AWS Signature v4
+
+```bru
+auth:awsv4 {
+  accessKeyId: {{awsAccessKeyId}}
+  secretAccessKey: {{awsSecretAccessKey}}
+  sessionToken: {{awsSessionToken}}
+  service: execute-api
+  region: us-east-1
+  profileName: default
+}
+```
+
+<ParamField path="accessKeyId" type="string" required>
+  AWS access key ID
+</ParamField>
+
+<ParamField path="secretAccessKey" type="string" required>
+  AWS secret access key
+</ParamField>
+
+<ParamField path="sessionToken" type="string">
+  AWS session token (for temporary credentials)
+</ParamField>
+
+<ParamField path="service" type="string" required>
+  AWS service name (e.g., `execute-api`, `s3`)
+</ParamField>
+
+<ParamField path="region" type="string" required>
+  AWS region (e.g., `us-east-1`)
+</ParamField>
+
+<ParamField path="profileName" type="string">
+  AWS profile name from credentials file
+</ParamField>
+
+### OAuth 2.0
+
+<Tabs>
+  <Tab title="Authorization Code">
+    ```bru
+    auth:oauth2 {
+      grant_type: authorization_code
+      callback_url: http://localhost:8080/callback
+      authorization_url: https://oauth.example.com/authorize
+      access_token_url: https://oauth.example.com/token
+      refresh_token_url: https://oauth.example.com/refresh
+      client_id: {{clientId}}
+      client_secret: {{clientSecret}}
+      scope: read write
+      state: {{$randomString}}
+      pkce: true
+      auto_fetch_token: true
+      auto_refresh_token: true
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Client Credentials">
+    ```bru
+    auth:oauth2 {
+      grant_type: client_credentials
+      access_token_url: https://oauth.example.com/token
+      client_id: {{clientId}}
+      client_secret: {{clientSecret}}
+      scope: api:read api:write
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Password Grant">
+    ```bru
+    auth:oauth2 {
+      grant_type: password
+      access_token_url: https://oauth.example.com/token
+      username: {{username}}
+      password: {{password}}
+      client_id: {{clientId}}
+      client_secret: {{clientSecret}}
+      scope: read write
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### WSSE Authentication
+
+```bru
+auth:wsse {
+  username: user
+  password: {{password}}
+}
+```
+
+### NTLM Authentication
+
+```bru
+auth:ntlm {
+  username: DOMAIN\\user
+  password: {{password}}
+  domain: DOMAIN
+}
+```
+
+## Request Body
+
+### JSON Body
+
+```bru
+body:json {
+  {
+    "username": "johndoe",
+    "email": "john@example.com",
+    "profile": {
+      "firstName": "John",
+      "lastName": "Doe",
+      "age": 30
+    },
+    "tags": ["admin", "verified"]
+  }
+}
+```
+
+### Text Body
+
+```bru
+body:text {
+  This is plain text content.
+  It can span multiple lines.
+  Variables like {{username}} are interpolated.
+}
+```
+
+### XML Body
+
+```bru
+body:xml {
+  <?xml version="1.0" encoding="UTF-8"?>
+  <user>
+    <username>johndoe</username>
+    <email>john@example.com</email>
+    <profile>
+      <firstName>John</firstName>
+      <lastName>Doe</lastName>
+    </profile>
+  </user>
+}
+```
+
+### GraphQL Query
+
+```bru
+body:graphql {
+  query GetUser($id: ID!) {
+    user(id: $id) {
+      id
+      username
+      email
+      profile {
+        firstName
+        lastName
+      }
+    }
+  }
+}
+```
+
+### GraphQL Variables
+
+```bru
+body:graphql:vars {
+  {
+    "id": "{{userId}}",
+    "includeProfile": true
+  }
+}
+```
+
+### SPARQL Query
+
+```bru
+body:sparql {
+  PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+  
+  SELECT ?name ?email
+  WHERE {
+    ?person foaf:name ?name .
+    ?person foaf:mbox ?email .
+  }
+  LIMIT 10
+}
+```
+
+### Form URL Encoded
+
+```bru
+body:form-urlencoded {
+  username: johndoe
+  password: {{password}}
+  grant_type: password
+  ~scope: admin
+}
+```
+
+### Multipart Form
+
+```bru
+body:multipart-form {
+  username: johndoe
+  email: john@example.com
+  avatar: @file(/path/to/avatar.png)
+  bio: '''
+    Software developer
+    and open source contributor
+  ''' @contentType(text/plain)
+}
+```
+
+<Info>
+  Use `@file(path)` to upload files and `@contentType(type)` to specify content type.
+</Info>
+
+### File Upload
+
+```bru
+body:file {
+  file: @file(/path/to/document.pdf) @contentType(application/pdf)
+  file: @file(/path/to/image.jpg) @contentType(image/jpeg)
+  ~file: @file(/path/to/disabled.txt)
+}
+```
+
+## Variables
+
+### Pre-Request Variables
+
+Set variables before the request is sent:
+
+```bru
+vars:pre-request {
+  timestamp: {{$timestamp}}
+  requestId: {{$uuid}}
+  signature: computed-value
+  @localSecret: not-saved-to-file
+}
+```
+
+<Warning>
+  Variables prefixed with `@` are local and won't be persisted to the .bru file.
+</Warning>
+
+### Post-Response Variables
+
+Extract variables from the response:
+
+```bru
+vars:post-response {
+  token: $res.body.token
+  userId: $res.body.user.id
+  expiresAt: $res.body.expiresAt
+  @sessionId: $res.body.sessionId
+}
+```
+
+### Response Path Syntax
+
+- `$res.status` - HTTP status code
+- `$res.body` - Response body (parsed as JSON if applicable)
+- `$res.body.field` - Access nested fields
+- `$res.body.array[0]` - Access array elements
+- `$res.headers.headerName` - Access response headers
+
+## Assertions
+
+```bru
+assert {
+  $res.status: 200
+  $res.body.success: true
+  $res.body.user.id: isDefined
+  $res.body.user.email: john@example.com
+  $res.headers.content-type: application/json
+  ~$res.body.debug: enabled
+}
+```
+
+### Assertion Operators
+
+- Exact match: `field: value`
+- Type check: `field: isDefined`, `field: isNull`
+- Numeric: `field: > 100`, `field: < 1000`
+- Pattern: `field: matches /regex/`
+
+## Scripts
+
+### Pre-Request Script
+
+Execute code before sending the request:
+
+```bru
+script:pre-request {
+  const crypto = require('crypto');
+  const timestamp = Date.now();
+  
+  bru.setVar('timestamp', timestamp);
+  
+  const signature = crypto
+    .createHmac('sha256', bru.getEnvVar('apiSecret'))
+    .update(`${timestamp}${bru.getVar('userId')}`)
+    .digest('hex');
+    
+  bru.setVar('signature', signature);
+  
+  console.log('Request signature generated');
+}
+```
+
+### Post-Response Script
+
+Execute code after receiving the response:
+
+```bru
+script:post-response {
+  const body = res.getBody();
+  
+  if (body.token) {
+    bru.setEnvVar('authToken', body.token);
+    console.log('Auth token saved');
+  }
+  
+  if (body.refreshToken) {
+    bru.setEnvVar('refreshToken', body.refreshToken);
+  }
+}
+```
+
+### Available APIs in Scripts
+
+<AccordionGroup>
+  <Accordion title="bru API">
+    - `bru.getVar(name)` - Get request variable
+    - `bru.setVar(name, value)` - Set request variable
+    - `bru.getEnvVar(name)` - Get environment variable
+    - `bru.setEnvVar(name, value)` - Set environment variable
+    - `bru.getProcessEnv(name)` - Get process environment variable
+  </Accordion>
+  
+  <Accordion title="req API (Pre-Request)">
+    - `req.getUrl()` - Get request URL
+    - `req.setUrl(url)` - Set request URL
+    - `req.getMethod()` - Get HTTP method
+    - `req.setMethod(method)` - Set HTTP method
+    - `req.getHeader(name)` - Get header value
+    - `req.setHeader(name, value)` - Set header
+    - `req.getBody()` - Get request body
+    - `req.setBody(body)` - Set request body
+  </Accordion>
+  
+  <Accordion title="res API (Post-Response)">
+    - `res.getStatus()` - Get HTTP status code
+    - `res.getStatusText()` - Get status text
+    - `res.getHeader(name)` - Get response header
+    - `res.getHeaders()` - Get all headers
+    - `res.getBody()` - Get parsed response body
+    - `res.getResponseTime()` - Get response time in ms
+  </Accordion>
+</AccordionGroup>
+
+## Tests
+
+```bru
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should have user data", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('user');
+    expect(body.user).to.have.property('id');
+    expect(body.user.id).to.be.a('number');
+  });
+  
+  test("User email should be valid", function() {
+    const body = res.getBody();
+    expect(body.user.email).to.match(/^[^@]+@[^@]+\.[^@]+$/);
+  });
+  
+  test("Response time should be acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(1000);
+  });
+}
+```
+
+### Test Assertions
+
+Uses Chai assertion library:
+
+- `expect(value).to.equal(expected)`
+- `expect(value).to.be.ok`
+- `expect(value).to.be.a('string')`
+- `expect(value).to.have.property('field')`
+- `expect(value).to.match(/regex/)`
+- `expect(value).to.be.above(number)`
+- `expect(value).to.be.below(number)`
+
+## Documentation
+
+```bru
+docs {
+  # Create User Account
+  
+  This endpoint creates a new user account with the provided information.
+  
+  ## Requirements
+  - Valid authentication token
+  - Unique email address
+  - Password must be at least 8 characters
+  
+  ## Response
+  Returns the created user object with ID, username, and authentication token.
+  
+  ## Rate Limiting
+  Limited to 10 requests per minute per IP address.
+}
+```
+
+<Info>
+  The docs block supports Markdown formatting.
+</Info>
+
+## Settings
+
+```bru
+settings {
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  encodeUrl: true
+}
+```
+
+<ParamField path="timeout" type="number" default="0">
+  Request timeout in milliseconds (0 = no timeout)
+</ParamField>
+
+<ParamField path="followRedirects" type="boolean" default="true">
+  Whether to follow HTTP redirects
+</ParamField>
+
+<ParamField path="maxRedirects" type="number" default="5">
+  Maximum number of redirects to follow
+</ParamField>
+
+<ParamField path="encodeUrl" type="boolean" default="false">
+  Whether to automatically encode URL parameters
+</ParamField>
+
+## Complete Example
+
+```bru
+meta {
+  name: Create User
+  type: http
+  seq: 1
+  tags: [
+    users
+    create
+    authenticated
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/users
+  body: json
+  auth: bearer
+}
+
+params:query {
+  notify: true
+  source: web
+}
+
+headers {
+  content-type: application/json
+  x-request-id: {{$uuid}}
+  x-api-version: 1.0
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "username": "johndoe",
+    "email": "john@example.com",
+    "password": "SecurePass123!",
+    "profile": {
+      "firstName": "John",
+      "lastName": "Doe",
+      "age": 30,
+      "interests": ["coding", "music"]
+    }
+  }
+}
+
+vars:pre-request {
+  timestamp: {{$timestamp}}
+  requestId: {{$uuid}}
+}
+
+vars:post-response {
+  userId: $res.body.id
+  userToken: $res.body.token
+  createdAt: $res.body.createdAt
+}
+
+assert {
+  $res.status: 201
+  $res.body.id: isDefined
+  $res.body.username: johndoe
+  $res.body.email: john@example.com
+}
+
+script:pre-request {
+  console.log('Creating user account...');
+  bru.setVar('createdBy', 'api-client');
+}
+
+script:post-response {
+  const body = res.getBody();
+  
+  if (body.id) {
+    bru.setEnvVar('lastCreatedUserId', body.id);
+  }
+  
+  if (body.token) {
+    bru.setEnvVar('newUserToken', body.token);
+  }
+  
+  console.log(`User created with ID: ${body.id}`);
+}
+
+tests {
+  test("User created successfully", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("Response contains user ID", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('id');
+    expect(body.id).to.be.a('number');
+  });
+  
+  test("Username matches request", function() {
+    expect(res.getBody().username).to.equal('johndoe');
+  });
+  
+  test("Response includes authentication token", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('token');
+    expect(body.token).to.be.a('string');
+    expect(body.token.length).to.be.above(20);
+  });
+}
+
+docs {
+  # Create User Account
+  
+  Creates a new user account with the provided profile information.
+  
+  ## Requirements
+  - Valid authentication token (admin or service account)
+  - Unique username and email
+  - Password must meet complexity requirements:
+    - At least 8 characters
+    - Contains uppercase and lowercase letters
+    - Contains at least one number
+  
+  ## Response
+  Returns the created user object with:
+  - Unique user ID
+  - Username and email
+  - Authentication token for the new user
+  - Profile information
+  - Creation timestamp
+  
+  ## Notifications
+  If `notify=true`, sends a welcome email to the user.
+}
+
+settings {
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 3
+}
+```
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Bru Syntax" icon="code" href="/api/bru-syntax">
+    Complete Bru language syntax reference
+  </Card>
+  <Card title="Collection Format" icon="folder-tree" href="/api/collection-format">
+    Collection and environment file formats
+  </Card>
+</CardGroup>

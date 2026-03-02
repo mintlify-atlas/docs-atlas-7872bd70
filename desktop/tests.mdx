@@ -1,0 +1,547 @@
+---
+title: Tests
+description: Write powerful JavaScript test assertions to validate API responses in Bruno
+---
+
+Bruno includes a comprehensive testing framework that allows you to write JavaScript test assertions to validate API responses. Tests are managed by the `Tests` component and use a Chai-based assertion library.
+
+## Overview
+
+Tests in Bruno are JavaScript code snippets that run after receiving an API response. They use the same execution environment as scripts but are specifically designed for assertions and validations.
+
+### Tests vs Assertions
+
+Bruno provides two ways to validate responses:
+
+<Tabs>
+  <Tab title="Tests Tab">
+    JavaScript test suite using Chai assertions. Managed by the `Tests` component.
+    
+    ```javascript
+    test("Status should be 200", function() {
+      expect(res.status).to.equal(200);
+    });
+    
+    test("Response should have users array", function() {
+      expect(res.body.users).to.be.an('array');
+      expect(res.body.users.length).to.be.greaterThan(0);
+    });
+    ```
+  </Tab>
+  <Tab title="Assert Tab">
+    Inline assertions using Bruno's assertion syntax. Managed by the `Assertions` component.
+    
+    ```bru
+    assert {
+      res.status: eq 200
+      res.body.users: isDefined
+      res.body.users.length: gt 0
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Info>
+  Use the **Assert** tab for simple, declarative assertions. Use the **Tests** tab for complex validations, loops, and conditional logic.
+</Info>
+
+## Test Editor
+
+The `Tests` component provides a CodeMirror editor with:
+
+- JavaScript syntax highlighting
+- Auto-hints for `req`, `res`, and `bru` objects
+- Keyboard shortcuts (Cmd/Ctrl+Enter to run, Cmd/Ctrl+S to save)
+- Error indicators in the Tests tab
+
+From `RequestPane/Tests/index.js`:
+
+```jsx
+<CodeEditor
+  collection={collection}
+  value={tests || ''}
+  theme={displayedTheme}
+  font={get(preferences, 'font.codeFont', 'default')}
+  fontSize={get(preferences, 'font.codeFontSize')}
+  onEdit={onEdit}
+  mode="javascript"
+  onRun={onRun}
+  onSave={onSave}
+  showHintsFor={['req', 'res', 'bru']}
+/>
+```
+
+## Available Objects in Tests
+
+<ParamField path="res" type="object">
+  Response object containing:
+  - `res.status`: HTTP status code (e.g., 200, 404)
+  - `res.statusText`: Status text (e.g., "OK", "Not Found")
+  - `res.headers`: Response headers object
+  - `res.body`: Parsed response body (JSON object/array)
+  - `res.getHeader(name)`: Get specific header value
+  - `res.getBody()`: Get raw response body
+</ParamField>
+
+<ParamField path="req" type="object">
+  Request object (read-only in tests):
+  - `req.url`: Request URL
+  - `req.method`: HTTP method
+  - `req.headers`: Request headers
+  - `req.body`: Request body
+</ParamField>
+
+<ParamField path="bru" type="object">
+  Bruno utility object:
+  - `bru.getVar(name)`: Get collection variable
+  - `bru.setVar(name, value)`: Set collection variable
+  - `bru.getEnvVar(name)`: Get environment variable
+  - `bru.setEnvVar(name, value)`: Set environment variable
+</ParamField>
+
+## Chai Assertion Library
+
+Bruno tests use Chai for assertions. The `expect` and `test` functions are globally available.
+
+### Basic Assertions
+
+<Tabs>
+  <Tab title="Equality">
+    ```javascript
+    test("Status code is 200", function() {
+      expect(res.status).to.equal(200);
+    });
+    
+    test("Response message matches", function() {
+      expect(res.body.message).to.equal("Success");
+    });
+    
+    test("Deep equality", function() {
+      expect(res.body.user).to.deep.equal({
+        id: 123,
+        name: "John Doe"
+      });
+    });
+    ```
+  </Tab>
+  <Tab title="Type Checking">
+    ```javascript
+    test("Response body is an object", function() {
+      expect(res.body).to.be.an('object');
+    });
+    
+    test("Users is an array", function() {
+      expect(res.body.users).to.be.an('array');
+    });
+    
+    test("ID is a number", function() {
+      expect(res.body.id).to.be.a('number');
+    });
+    
+    test("Email is a string", function() {
+      expect(res.body.email).to.be.a('string');
+    });
+    ```
+  </Tab>
+  <Tab title="Existence">
+    ```javascript
+    test("Access token exists", function() {
+      expect(res.body.access_token).to.exist;
+    });
+    
+    test("User object is defined", function() {
+      expect(res.body.user).to.not.be.undefined;
+    });
+    
+    test("Error is null", function() {
+      expect(res.body.error).to.be.null;
+    });
+    ```
+  </Tab>
+  <Tab title="Comparison">
+    ```javascript
+    test("Status is greater than or equal to 200", function() {
+      expect(res.status).to.be.at.least(200);
+    });
+    
+    test("Status is less than 300", function() {
+      expect(res.status).to.be.below(300);
+    });
+    
+    test("Users array is not empty", function() {
+      expect(res.body.users.length).to.be.greaterThan(0);
+    });
+    ```
+  </Tab>
+</Tabs>
+
+### Advanced Assertions
+
+<Tabs>
+  <Tab title="Object Properties">
+    ```javascript
+    test("Response has required properties", function() {
+      expect(res.body).to.have.property('id');
+      expect(res.body).to.have.property('name');
+      expect(res.body).to.have.property('email');
+    });
+    
+    test("User has all properties", function() {
+      expect(res.body.user).to.have.all.keys('id', 'name', 'email', 'role');
+    });
+    
+    test("Nested property exists", function() {
+      expect(res.body).to.have.nested.property('user.address.city');
+    });
+    ```
+  </Tab>
+  <Tab title="Arrays">
+    ```javascript
+    test("Array contains specific item", function() {
+      expect(res.body.tags).to.include('javascript');
+    });
+    
+    test("Array length is correct", function() {
+      expect(res.body.users).to.have.lengthOf(10);
+    });
+    
+    test("Array includes object with property", function() {
+      expect(res.body.users).to.deep.include({ id: 1, name: 'John' });
+    });
+    
+    test("All items match condition", function() {
+      res.body.users.forEach(user => {
+        expect(user).to.have.property('id');
+        expect(user.id).to.be.a('number');
+      });
+    });
+    ```
+  </Tab>
+  <Tab title="Strings">
+    ```javascript
+    test("Email contains @", function() {
+      expect(res.body.email).to.include('@');
+    });
+    
+    test("URL starts with https", function() {
+      expect(res.body.url).to.match(/^https:\/\//);
+    });
+    
+    test("Message has minimum length", function() {
+      expect(res.body.message).to.have.lengthOf.at.least(10);
+    });
+    ```
+  </Tab>
+  <Tab title="Headers">
+    ```javascript
+    test("Content-Type is JSON", function() {
+      expect(res.getHeader('content-type')).to.include('application/json');
+    });
+    
+    test("CORS header is set", function() {
+      expect(res.headers).to.have.property('access-control-allow-origin');
+    });
+    
+    test("Cache header is correct", function() {
+      const cacheControl = res.getHeader('cache-control');
+      expect(cacheControl).to.equal('no-cache');
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Real-World Examples
+
+From the Bruno test suite:
+
+### Form URL Encoded Test
+
+```javascript bruno-tests/collection/echo/echo form-url-encoded.bru
+tests {
+  test("form-urlencoded body with variables and duplicate keys", function() {
+    const expected = [
+      "form-data-key=form-data-value",
+      "form-data-stringified-object=%7B%22foo%22%3A123%7D", // {"foo":123} URL encoded
+      "key_1=value_1",
+      "key_2=value_2", 
+      "key_1=value_3", // duplicate key with different value
+      "key_2=value_4"  // duplicate key with different value
+    ].join("&");
+    
+    expect(res.getBody()).to.eql(expected);
+  });
+}
+```
+
+### Collection-Level Test
+
+From `collection.bru`:
+
+```javascript
+tests {
+  const shouldTestCollectionScripts = bru.getVar('should-test-collection-scripts');
+  const collectionVar = bru.getVar("collection-var-set-by-collection-script");
+  
+  if (shouldTestCollectionScripts && collectionVar) {
+    test("collection level test - should get the var that was set by the collection script", function() {
+      expect(collectionVar).to.equal("collection-var-value-set-by-collection-script");
+    }); 
+    
+    bru.setVar('collection-var-set-by-collection-script', null); 
+    bru.setVar('should-test-collection-scripts', null);
+  }
+}
+```
+
+### Assert Combinations Test
+
+From `bruno-tests/collection/asserts/test-assert-combinations.bru` showing various assertion patterns:
+
+```bru
+assert {
+  res.body.string: eq foo
+  res.body.string: eq 'foo'
+  res.body.string: eq "foo"
+  res.body.number: eq 123
+  res.body.numberAsString: eq '123'
+  res.body.numberBig.toString(): eq '9007199254740992000'
+  res.body.null: eq null
+  res.body.nullAsString: eq "null"
+  res.body.true: eq true
+  res.body.trueAsString: eq "true"
+  res.body.false: eq false
+  res.body.nonexistent: eq undefined
+  res.body.stringWithCurlyBraces: eq "{foo}"
+  res.body.stringWithDoubleCurlyBraces: eq "{{foobar}}"
+}
+```
+
+## Common Testing Patterns
+
+<AccordionGroup>
+  <Accordion title="Test Status Code Range">
+    ```javascript
+    test("Response is successful (2xx)", function() {
+      expect(res.status).to.be.at.least(200);
+      expect(res.status).to.be.below(300);
+    });
+    ```
+  </Accordion>
+  <Accordion title="Validate Response Schema">
+    ```javascript
+    test("User object has correct schema", function() {
+      expect(res.body).to.be.an('object');
+      expect(res.body).to.have.property('id').that.is.a('number');
+      expect(res.body).to.have.property('name').that.is.a('string');
+      expect(res.body).to.have.property('email').that.is.a('string');
+      expect(res.body).to.have.property('created_at').that.is.a('string');
+    });
+    ```
+  </Accordion>
+  <Accordion title="Test Pagination">
+    ```javascript
+    test("Pagination data is valid", function() {
+      expect(res.body).to.have.property('pagination');
+      expect(res.body.pagination.page).to.equal(1);
+      expect(res.body.pagination.per_page).to.equal(10);
+      expect(res.body.pagination.total).to.be.a('number');
+      expect(res.body.data).to.be.an('array');
+      expect(res.body.data.length).to.be.at.most(10);
+    });
+    ```
+  </Accordion>
+  <Accordion title="Validate Email Format">
+    ```javascript
+    test("Email format is valid", function() {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      expect(res.body.email).to.match(emailRegex);
+    });
+    ```
+  </Accordion>
+  <Accordion title="Test Array Elements">
+    ```javascript
+    test("All users have required fields", function() {
+      expect(res.body.users).to.be.an('array');
+      expect(res.body.users.length).to.be.greaterThan(0);
+      
+      res.body.users.forEach(user => {
+        expect(user).to.have.property('id');
+        expect(user).to.have.property('name');
+        expect(user).to.have.property('email');
+      });
+    });
+    ```
+  </Accordion>
+  <Accordion title="Conditional Testing">
+    ```javascript
+    test("Response structure varies by type", function() {
+      if (res.body.type === 'user') {
+        expect(res.body).to.have.property('email');
+        expect(res.body).to.have.property('role');
+      } else if (res.body.type === 'organization') {
+        expect(res.body).to.have.property('domain');
+        expect(res.body).to.have.property('members');
+      }
+    });
+    ```
+  </Accordion>
+  <Accordion title="Test Error Responses">
+    ```javascript
+    test("Error response has correct structure", function() {
+      expect(res.status).to.be.at.least(400);
+      expect(res.body).to.have.property('error');
+      expect(res.body.error).to.have.property('message');
+      expect(res.body.error).to.have.property('code');
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Test Storage
+
+Tests are stored in the `.bru` file:
+
+```bru
+tests {
+  test("Status should be 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  
+  test("Response has users", function() {
+    expect(res.body.users).to.be.an('array');
+  });
+}
+```
+
+The Redux store manages test state through `updateRequestTests` action.
+
+## Test Execution & Results
+
+When you send a request:
+
+<Steps>
+  <Step title="Request Executes">
+    Bruno sends the HTTP request using the Axios client.
+  </Step>
+  <Step title="Response Received">
+    Response data is captured and made available as `res` object.
+  </Step>
+  <Step title="Tests Run">
+    Tests execute in order. Each `test()` function runs independently.
+  </Step>
+  <Step title="Results Displayed">
+    Test results appear in the Response Pane, showing passed/failed tests.
+  </Step>
+</Steps>
+
+### Test Error Indicators
+
+The Tests tab shows error indicators:
+
+```jsx From HttpRequestPane component
+tests: tests?.length > 0 ? (hasTestError ? <StatusDot type="error" /> : <StatusDot />) : null
+```
+
+Failed tests populate `item.testScriptErrorMessage`.
+
+## Collection Runner Tests
+
+When running multiple requests using the `RunCollectionItem` component, tests run for each request and results are aggregated in `RunnerResults`.
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Write Descriptive Test Names">
+    Use clear, descriptive names that explain what is being tested:
+    
+    ```javascript
+    // Good
+    test("User creation returns 201 with user ID", function() { ... });
+    
+    // Bad
+    test("test1", function() { ... });
+    ```
+  </Accordion>
+  <Accordion title="Test One Thing Per Test">
+    Keep tests focused on a single assertion or related group:
+    
+    ```javascript
+    // Good - focused
+    test("Status code is 200", function() {
+      expect(res.status).to.equal(200);
+    });
+    
+    test("Response has user object", function() {
+      expect(res.body.user).to.exist;
+    });
+    
+    // Bad - too much in one test
+    test("Everything works", function() {
+      expect(res.status).to.equal(200);
+      expect(res.body.user).to.exist;
+      expect(res.headers).to.have.property('content-type');
+    });
+    ```
+  </Accordion>
+  <Accordion title="Use Appropriate Assertion Types">
+    Choose the right Chai assertion for readability:
+    
+    ```javascript
+    // Good - clear intent
+    expect(res.body.users).to.be.an('array');
+    expect(res.body.users).to.not.be.empty;
+    
+    // Bad - unnecessarily complex
+    expect(typeof res.body.users === 'object' && Array.isArray(res.body.users)).to.be.true;
+    ```
+  </Accordion>
+  <Accordion title="Validate Both Success and Error Cases">
+    Test happy paths and error scenarios:
+    
+    ```javascript
+    // Success case
+    test("Valid request returns 200", function() {
+      expect(res.status).to.equal(200);
+    });
+    
+    // Error case (in separate request)
+    test("Invalid ID returns 404 with error", function() {
+      expect(res.status).to.equal(404);
+      expect(res.body.error).to.exist;
+    });
+    ```
+  </Accordion>
+  <Accordion title="Extract Common Validations">
+    Put repeated validations in collection-level tests:
+    
+    ```javascript collection.bru tests
+    tests {
+      // Run for all requests in collection
+      test("Response time is acceptable", function() {
+        expect(res.responseTime).to.be.below(1000);
+      });
+      
+      test("Content-Type is JSON", function() {
+        expect(res.getHeader('content-type')).to.include('application/json');
+      });
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Assertions" icon="check-double" href="/advanced/assertions">
+    Learn about inline assertions using the Assert tab
+  </Card>
+  <Card title="Scripts" icon="scroll" href="/desktop/scripts">
+    Combine tests with pre/post-request scripts
+  </Card>
+  <Card title="Collection Runner" icon="play" href="/cli/running-tests">
+    Run tests across multiple requests
+  </Card>
+  <Card title="Collection Settings" icon="sliders" href="/desktop/collection-settings">
+    Configure collection-level tests
+  </Card>
+</CardGroup>

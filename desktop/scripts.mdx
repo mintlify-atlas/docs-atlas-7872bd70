@@ -1,0 +1,526 @@
+---
+title: Scripts
+description: Automate workflows with JavaScript pre-request and post-response scripts in Bruno
+---
+
+Bruno provides powerful scripting capabilities through the `Script` component, allowing you to write JavaScript code that executes before sending requests (pre-request) or after receiving responses (post-response).
+
+## Overview
+
+Scripts in Bruno are JavaScript code snippets that run in a sandboxed environment. They're managed by the `Script` component in `RequestPane/Script/index.js`.
+
+### Script Types
+
+Bruno supports two types of scripts:
+
+<CardGroup cols={2}>
+  <Card title="Pre-Request Scripts" icon="play">
+    Execute before the request is sent. Use to set variables, modify headers, or prepare data.
+    
+    Accessed via the "Pre Request" tab in the Script pane.
+  </Card>
+  <Card title="Post-Response Scripts" icon="check">
+    Execute after receiving the response. Use to extract data, set variables, or chain requests.
+    
+    Accessed via the "Post Response" tab in the Script pane.
+  </Card>
+</CardGroup>
+
+## Script Editor
+
+The `Script` component provides two CodeMirror editors:
+
+- **Pre-request editor**: `preRequestEditorRef` - Mode: `javascript`
+- **Post-response editor**: `postResponseEditorRef` - Mode: `javascript`
+
+Both editors include:
+- Syntax highlighting for JavaScript
+- Auto-hints for `req`, `res`, and `bru` objects
+- Keyboard shortcuts (Cmd/Ctrl+Enter to run, Cmd/Ctrl+S to save)
+
+### Error Indicators
+
+The Script tab shows status dots to indicate script state:
+
+```jsx From Script component
+<StatusDot type={item.preRequestScriptErrorMessage ? 'error' : 'default'} />
+<StatusDot type={item.postResponseScriptErrorMessage ? 'error' : 'default'} />
+```
+
+<Info>
+  Error status dots appear when a script fails execution, helping you quickly identify problematic scripts.
+</Info>
+
+## Pre-Request Scripts
+
+Pre-request scripts execute before Bruno sends the HTTP request. They have access to the `req` and `bru` objects.
+
+### Available Objects
+
+<ParamField path="req" type="object">
+  Request object with methods to modify the outgoing request:
+  - `req.setHeader(name, value)`: Set request header
+  - `req.getHeader(name)`: Get request header
+  - `req.setBody(data)`: Set request body
+  - `req.getUrl()`: Get request URL
+  - `req.setUrl(url)`: Set request URL
+</ParamField>
+
+<ParamField path="bru" type="object">
+  Bruno utility object:
+  - `bru.setVar(name, value)`: Set collection variable
+  - `bru.getVar(name)`: Get collection variable
+  - `bru.setEnvVar(name, value)`: Set environment variable
+  - `bru.getEnvVar(name)`: Get environment variable
+</ParamField>
+
+### Pre-Request Script Examples
+
+<Tabs>
+  <Tab title="Set Dynamic Headers">
+    ```javascript
+    // Set timestamp header
+    const timestamp = Date.now();
+    req.setHeader('X-Request-Timestamp', timestamp.toString());
+    
+    // Set custom user agent
+    req.setHeader('User-Agent', 'Bruno/1.0 (Custom)');
+    ```
+  </Tab>
+  <Tab title="Basic Auth Encoding">
+    From the test suite:
+    
+    ```javascript bruno-tests/collection/auth/basic/via script/Basic Auth 200.bru
+    const username = "bruno";
+    const password = "della";
+    
+    const authString = `${username}:${password}`;
+    const encodedAuthString = require('btoa')(authString);
+    
+    req.setHeader("Authorization", `Basic ${encodedAuthString}`);
+    ```
+  </Tab>
+  <Tab title="Set Variables">
+    ```javascript
+    // Set runtime variables
+    bru.setVar('request_id', crypto.randomUUID());
+    bru.setVar('timestamp', new Date().toISOString());
+    
+    // Get and use existing variables
+    const apiKey = bru.getEnvVar('api_key');
+    req.setHeader('X-API-Key', apiKey);
+    ```
+  </Tab>
+  <Tab title="Modify Request Body">
+    From test suite:
+    
+    ```javascript
+    // Set form data variables
+    let obj = JSON.stringify({foo:123});
+    bru.setVar('form-data-key', 'form-data-value');
+    bru.setVar('form-data-stringified-object', obj);
+    ```
+  </Tab>
+  <Tab title="Dynamic URL">
+    ```javascript
+    // Build dynamic URL based on conditions
+    const environment = bru.getEnvVar('environment');
+    const baseUrl = environment === 'production' 
+      ? 'https://api.example.com'
+      : 'https://staging-api.example.com';
+    
+    req.setUrl(`${baseUrl}/users`);
+    ```
+  </Tab>
+</Tabs>
+
+## Post-Response Scripts
+
+Post-response scripts execute after receiving the API response. They have access to `req`, `res`, and `bru` objects.
+
+### Available Objects
+
+<ParamField path="res" type="object">
+  Response object with response data:
+  - `res.status`: HTTP status code
+  - `res.statusText`: Status text (e.g., "OK")
+  - `res.headers`: Response headers object
+  - `res.body`: Parsed response body
+  - `res.getHeader(name)`: Get specific header
+  - `res.getBody()`: Get response body
+</ParamField>
+
+<ParamField path="req" type="object">
+  Original request object (read-only in post-response)
+</ParamField>
+
+<ParamField path="bru" type="object">
+  Bruno utility object (same as pre-request)
+</ParamField>
+
+### Post-Response Script Examples
+
+<Tabs>
+  <Tab title="Extract & Store Token">
+    From the test suite:
+    
+    ```javascript bruno-tests/collection/auth/bearer/via auth/Bearer Auth 200.bru
+    bru.setEnvVar("foo", "bar");
+    ```
+    
+    More complex example:
+    
+    ```javascript
+    // Extract token from response
+    const accessToken = res.body.access_token;
+    const refreshToken = res.body.refresh_token;
+    const expiresIn = res.body.expires_in;
+    
+    // Store in environment
+    bru.setEnvVar('access_token', accessToken);
+    bru.setEnvVar('refresh_token', refreshToken);
+    
+    // Calculate expiry time
+    const expiryTime = Date.now() + (expiresIn * 1000);
+    bru.setEnvVar('token_expiry', expiryTime);
+    
+    console.log(`Token stored, expires at ${new Date(expiryTime)}`);
+    ```
+  </Tab>
+  <Tab title="Chain Requests">
+    ```javascript
+    // Extract user ID from create user response
+    const userId = res.body.id;
+    bru.setVar('user_id', userId);
+    
+    console.log(`Created user with ID: ${userId}`);
+    console.log('Use {{user_id}} in next request');
+    ```
+  </Tab>
+  <Tab title="Extract Pagination Info">
+    ```javascript
+    // Store pagination data
+    const nextPage = res.body.pagination.next_page;
+    const hasMore = res.body.pagination.has_more;
+    
+    bru.setVar('next_page', nextPage);
+    bru.setVar('has_more_pages', hasMore);
+    
+    if (hasMore) {
+      console.log(`More pages available. Next: ${nextPage}`);
+    } else {
+      console.log('Last page reached');
+    }
+    ```
+  </Tab>
+  <Tab title="Conditional Logic">
+    ```javascript
+    // Handle different response scenarios
+    if (res.status === 201) {
+      // Resource created successfully
+      const resourceId = res.body.id;
+      bru.setVar('created_resource_id', resourceId);
+      console.log('✓ Resource created:', resourceId);
+    } else if (res.status === 409) {
+      // Resource already exists
+      const existingId = res.body.existing_id;
+      bru.setVar('created_resource_id', existingId);
+      console.log('! Resource exists, using existing ID:', existingId);
+    }
+    ```
+  </Tab>
+  <Tab title="Response Processing">
+    ```javascript
+    // Process and transform response data
+    const users = res.body.users || [];
+    const userIds = users.map(user => user.id);
+    const userEmails = users.map(user => user.email);
+    
+    // Store as comma-separated values
+    bru.setVar('user_ids', userIds.join(','));
+    bru.setVar('user_emails', userEmails.join(','));
+    
+    console.log(`Processed ${users.length} users`);
+    ```
+  </Tab>
+</Tabs>
+
+## Collection-Level Scripts
+
+Scripts can be configured at the collection level in `collection.bru`, as shown in the test suite:
+
+```bru bruno-tests/collection/collection.bru
+script:pre-request {
+  // Collection-level pre-request script
+  const shouldTestCollectionScripts = bru.getVar('should-test-collection-scripts');
+  if(shouldTestCollectionScripts) {
+   bru.setVar('collection-var-set-by-collection-script', 'collection-var-value-set-by-collection-script');
+  }
+}
+
+tests {
+  // Collection-level tests
+  const shouldTestCollectionScripts = bru.getVar('should-test-collection-scripts');
+  const collectionVar = bru.getVar("collection-var-set-by-collection-script");
+  if (shouldTestCollectionScripts && collectionVar) {
+    test("collection level test - should get the var that was set by the collection script", function() {
+      expect(collectionVar).to.equal("collection-var-value-set-by-collection-script");
+    }); 
+    bru.setVar('collection-var-set-by-collection-script', null); 
+    bru.setVar('should-test-collection-scripts', null);
+  }
+}
+```
+
+<Info>
+  Collection-level scripts run for every request in the collection, unless overridden at the folder or request level.
+</Info>
+
+## Script Execution Order
+
+When a request is sent, scripts execute in this order:
+
+<Steps>
+  <Step title="Collection Pre-Request Script">
+    If configured in `collection.bru`, runs first.
+  </Step>
+  <Step title="Folder Pre-Request Script">
+    If the request is in a folder with scripts, folder script runs next.
+  </Step>
+  <Step title="Request Pre-Request Script">
+    Request-specific pre-request script runs last.
+  </Step>
+  <Step title="HTTP Request Sent">
+    Bruno sends the request with all modifications applied.
+  </Step>
+  <Step title="Request Post-Response Script">
+    Request-specific post-response script runs first.
+  </Step>
+  <Step title="Folder Post-Response Script">
+    Folder post-response script runs next.
+  </Step>
+  <Step title="Collection Post-Response Script">
+    Collection post-response script runs last.
+  </Step>
+</Steps>
+
+## Available Node.js Modules
+
+Bruno scripts run in a sandboxed environment with access to common Node.js modules:
+
+<CodeGroup>
+```javascript Encoding
+const encoded = require('btoa')('string to encode');
+const decoded = require('atob')('encoded string');
+```
+
+```javascript UUID
+const uuid = require('uuid').v4();
+bru.setVar('request_id', uuid);
+```
+
+```javascript Crypto
+const crypto = require('crypto');
+const hash = crypto.createHash('sha256').update('data').digest('hex');
+```
+
+```javascript Date
+const moment = require('moment');
+const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
+```
+</CodeGroup>
+
+<Note>
+  The available modules depend on the `bruno-js` package configuration. Check `packages/bruno-js` for the complete list of bundled libraries.
+</Note>
+
+## Debugging Scripts
+
+### Console Logging
+
+Use `console.log()` to debug scripts. Output appears in the response pane's Console tab:
+
+```javascript
+console.log('Pre-request script started');
+console.log('Request URL:', req.getUrl());
+console.log('API Key:', bru.getEnvVar('api_key'));
+
+const timestamp = Date.now();
+console.log('Timestamp:', timestamp);
+req.setHeader('X-Timestamp', timestamp);
+
+console.log('Pre-request script completed');
+```
+
+### Error Handling
+
+```javascript
+try {
+  const token = res.body.access_token;
+  if (!token) {
+    throw new Error('Access token not found in response');
+  }
+  bru.setEnvVar('access_token', token);
+  console.log('✓ Token extracted successfully');
+} catch (error) {
+  console.error('✗ Error:', error.message);
+  console.error('Response body:', JSON.stringify(res.body));
+}
+```
+
+### Status Indicators
+
+The Script tab shows error indicators:
+
+```jsx Component behavior
+{hasPreRequestScript && (
+  <StatusDot type={item.preRequestScriptErrorMessage ? 'error' : 'default'} />
+)}
+{hasPostResponseScript && (
+  <StatusDot type={item.postResponseScriptErrorMessage ? 'error' : 'default'} />
+)}
+```
+
+Errors are stored in:
+- `item.preRequestScriptErrorMessage`
+- `item.postResponseScriptErrorMessage`
+
+## Common Patterns
+
+<AccordionGroup>
+  <Accordion title="Token Refresh Flow">
+    ```javascript Pre-Request Script
+    // Check if token is expired
+    const tokenExpiry = bru.getEnvVar('token_expiry');
+    const now = Date.now();
+    
+    if (!tokenExpiry || now >= tokenExpiry) {
+      console.log('Token expired, will need refresh');
+      bru.setVar('needs_token_refresh', true);
+    }
+    ```
+    
+    ```javascript Post-Response Script
+    // Store new token
+    if (res.body.access_token) {
+      const expiresIn = res.body.expires_in || 3600;
+      const expiry = Date.now() + (expiresIn * 1000);
+      
+      bru.setEnvVar('access_token', res.body.access_token);
+      bru.setEnvVar('token_expiry', expiry);
+      console.log('✓ Token refreshed');
+    }
+    ```
+  </Accordion>
+  <Accordion title="Request Signing">
+    ```javascript
+    // Generate HMAC signature
+    const crypto = require('crypto');
+    const secret = bru.getEnvVar('api_secret');
+    const timestamp = Date.now().toString();
+    const body = JSON.stringify(req.getBody());
+    
+    const message = `${timestamp}.${body}`;
+    const signature = crypto
+      .createHmac('sha256', secret)
+      .update(message)
+      .digest('hex');
+    
+    req.setHeader('X-Timestamp', timestamp);
+    req.setHeader('X-Signature', signature);
+    ```
+  </Accordion>
+  <Accordion title="Conditional Request Modification">
+    ```javascript
+    // Modify request based on environment
+    const env = bru.getEnvVar('environment');
+    
+    if (env === 'development') {
+      // Use verbose mode in dev
+      req.setHeader('X-Debug-Mode', 'true');
+      console.log('Debug mode enabled');
+    } else if (env === 'production') {
+      // Add production-specific headers
+      req.setHeader('X-Production-Mode', 'true');
+      req.setHeader('X-App-Version', bru.getVar('app_version'));
+    }
+    ```
+  </Accordion>
+  <Accordion title="Data Extraction & Chaining">
+    ```javascript
+    // Extract multiple values for request chaining
+    const { id, token, metadata } = res.body;
+    
+    bru.setVar('resource_id', id);
+    bru.setVar('resource_token', token);
+    bru.setVar('resource_metadata', JSON.stringify(metadata));
+    
+    console.log('Extracted data for next request:');
+    console.log('- ID:', id);
+    console.log('- Token:', token);
+    console.log('Next: Use {{resource_id}} in subsequent requests');
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep Scripts Simple">
+    Scripts should be focused and easy to understand. Complex logic should be broken into multiple scripts or extracted to collection-level scripts.
+  </Accordion>
+  <Accordion title="Use Console Logging">
+    Add console.log statements to track script execution and debug issues. Logs appear in the Response Console tab.
+  </Accordion>
+  <Accordion title="Handle Errors Gracefully">
+    Wrap risky operations in try-catch blocks to prevent script failures from breaking your workflow.
+  </Accordion>
+  <Accordion title="Leverage Collection Scripts">
+    Put common logic (auth token refresh, signature generation) in collection-level scripts to avoid duplication.
+  </Accordion>
+  <Accordion title="Use Variables Wisely">
+    Store reusable values as variables. Use environment variables for environment-specific values and collection variables for runtime data.
+  </Accordion>
+  <Accordion title="Document Complex Scripts">
+    Add comments to explain what the script does, especially for complex transformations or auth flows.
+  </Accordion>
+</AccordionGroup>
+
+## Script Storage
+
+Scripts are stored in the `.bru` file format:
+
+```bru
+script:pre-request {
+  // Pre-request script code
+  const timestamp = Date.now();
+  req.setHeader('X-Timestamp', timestamp);
+}
+
+script:post-response {
+  // Post-response script code
+  const token = res.body.access_token;
+  bru.setEnvVar('access_token', token);
+}
+```
+
+The Redux store manages draft scripts:
+- `updateRequestScript`: Updates pre-request script
+- `updateResponseScript`: Updates post-response script
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tests" icon="vial-circle-check" href="/desktop/tests">
+    Learn how to write test assertions
+  </Card>
+  <Card title="Collection Settings" icon="gear" href="/desktop/collection-settings">
+    Configure collection-level scripts
+  </Card>
+  <Card title="Environment Variables" icon="tree" href="/concepts/environments">
+    Manage variables across environments
+  </Card>
+  <Card title="Authentication" icon="lock-keyhole" href="/desktop/authentication">
+    Use scripts for dynamic authentication
+  </Card>
+</CardGroup>

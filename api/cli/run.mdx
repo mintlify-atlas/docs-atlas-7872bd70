@@ -1,0 +1,448 @@
+---
+title: 'bru run'
+description: 'Run one or more requests or folders in your Bruno collection'
+---
+
+The `bru run` command executes API requests from your Bruno collection, allowing you to test APIs in different environments, automate testing, and integrate with CI/CD workflows.
+
+## Synopsis
+
+```bash
+bru run [paths...] [options]
+```
+
+## Arguments
+
+<ParamField path="paths" type="string[]" optional>
+  One or more paths to request files (.bru) or folders to execute. If not specified, runs all requests in the current collection recursively.
+  
+  Examples:
+  - `request.bru` - Run a single request
+  - `folder` - Run all requests in a folder
+  - `request.bru folder` - Run a request and all requests in a folder
+</ParamField>
+
+## Options
+
+### Execution Control
+
+<ParamField path="-r" type="boolean" default="false">
+  Indicates a recursive run. When enabled, runs all requests in subdirectories.
+</ParamField>
+
+<ParamField path="--bail" type="boolean">
+  Stop execution after a failure of a request, test, or assertion.
+</ParamField>
+
+<ParamField path="--tests-only" type="boolean">
+  Only run requests that have a test or active assertion. Filters out requests without tests, pre-request tests, post-response tests, or active assertions.
+</ParamField>
+
+<ParamField path="--delay" type="number">
+  Delay between each request in milliseconds. Useful for rate limiting or throttling requests.
+</ParamField>
+
+### Environment
+
+<ParamField path="--env" type="string">
+  Specify the environment to run with. This should match an environment name in your collection's `environments` folder.
+  
+  Example: `--env local`
+</ParamField>
+
+<ParamField path="--env-file" type="string">
+  Path to environment file (.bru, .json, or .yml) - absolute or relative. This allows loading environment variables from a custom file.
+  
+  Example: `--env-file env.bru`
+</ParamField>
+
+<ParamField path="--global-env" type="string">
+  Global environment name (requires collection to be in a workspace). Global environments are shared across multiple collections in a workspace.
+  
+  Example: `--global-env production`
+</ParamField>
+
+<ParamField path="--workspace-path" type="string">
+  Path to workspace directory. Auto-detected if not provided when using `--global-env`.
+</ParamField>
+
+<ParamField path="--env-var" type="string">
+  Overwrite a single environment variable. Can be used multiple times to override multiple variables.
+  
+  Format: `name=value`
+  
+  Example: `--env-var secret=xxx --env-var apiKey=abc123`
+</ParamField>
+
+### Output & Reporting
+
+<ParamField path="-o, --output" type="string">
+  Path to write file results to. Works in combination with `--format`.
+  
+  Example: `--output results.json`
+</ParamField>
+
+<ParamField path="-f, --format" type="string" default="json">
+  Format of the file results. Available formats:
+  - `json` - JSON format (default)
+  - `junit` - JUnit XML format
+  - `html` - HTML report
+  
+  Example: `--format junit`
+</ParamField>
+
+<ParamField path="--reporter-json" type="string">
+  Path to write JSON file results to. Allows outputting multiple report formats simultaneously.
+  
+  Example: `--reporter-json results.json`
+</ParamField>
+
+<ParamField path="--reporter-junit" type="string">
+  Path to write JUnit XML file results to.
+  
+  Example: `--reporter-junit results.xml`
+</ParamField>
+
+<ParamField path="--reporter-html" type="string">
+  Path to write HTML file results to.
+  
+  Example: `--reporter-html results.html`
+</ParamField>
+
+### Reporter Filtering
+
+<ParamField path="--reporter-skip-all-headers" type="boolean" default="false">
+  Omit all headers from the reporter output. Useful for reducing file size or removing sensitive header information.
+</ParamField>
+
+<ParamField path="--reporter-skip-headers" type="array" default="[]">
+  Skip specific headers from the reporter output. Provide header names to exclude.
+  
+  Example: `--reporter-skip-headers "Authorization" "Cookie"`
+</ParamField>
+
+<ParamField path="--reporter-skip-request-body" type="boolean" default="false">
+  Omit request body from the reporter output.
+</ParamField>
+
+<ParamField path="--reporter-skip-response-body" type="boolean" default="false">
+  Omit response body from the reporter output.
+</ParamField>
+
+<ParamField path="--reporter-skip-body" type="boolean" default="false">
+  Omit both request and response bodies from the reporter output. Shorthand for enabling both `--reporter-skip-request-body` and `--reporter-skip-response-body`.
+</ParamField>
+
+### Security & SSL
+
+<ParamField path="--insecure" type="boolean">
+  Allow insecure server connections. Disables SSL certificate verification.
+  
+  <Warning>Use with caution. Only use this option when connecting to trusted servers.</Warning>
+</ParamField>
+
+<ParamField path="--cacert" type="string">
+  CA certificate to verify peer against. By default, this certificate is used in addition to the default truststore.
+  
+  Example: `--cacert myCustomCA.pem`
+</ParamField>
+
+<ParamField path="--ignore-truststore" type="boolean" default="false">
+  The specified custom CA certificate (`--cacert`) will be used exclusively and the default truststore is ignored. Only evaluated in combination with `--cacert`.
+  
+  Example: `--cacert myCustomCA.pem --ignore-truststore`
+</ParamField>
+
+<ParamField path="--client-cert-config" type="string">
+  Path to the client certificate config file (JSON format) used for securing the connection in the request.
+  
+  The JSON file should have the following structure:
+  ```json
+  {
+    "enabled": true,
+    "certs": [
+      {
+        "domain": "example.com",
+        "certFilePath": "/path/to/cert.pem",
+        "keyFilePath": "/path/to/key.pem"
+      }
+    ]
+  }
+  ```
+</ParamField>
+
+### JavaScript Sandbox
+
+<ParamField path="--sandbox" type="string" default="safe">
+  JavaScript sandbox to use for executing scripts. Available sandboxes:
+  - `safe` - QuickJS runtime (default, more secure but limited)
+  - `developer` - Node.js VM runtime (more features but less isolated)
+</ParamField>
+
+### Network
+
+<ParamField path="--disable-cookies" type="boolean" default="false">
+  Disable automatically saving and sending cookies with requests.
+</ParamField>
+
+<ParamField path="--noproxy" type="boolean" default="false">
+  Disable all proxy settings (both collection-defined and system proxies).
+</ParamField>
+
+### Tag Filtering
+
+<ParamField path="--tags" type="string">
+  Tags to include in the run. Comma-separated list. Only requests with at least one of these tags will be executed.
+  
+  Example: `--tags hello,world`
+</ParamField>
+
+<ParamField path="--exclude-tags" type="string">
+  Tags to exclude from the run. Comma-separated list. Requests with any of these tags will be skipped.
+  
+  Example: `--exclude-tags skip,wip`
+</ParamField>
+
+### Debugging
+
+<ParamField path="--verbose" type="boolean">
+  Allow verbose output for debugging purposes. Provides detailed information about request execution.
+</ParamField>
+
+## Exit Codes
+
+The `bru run` command returns the following exit status codes:
+
+<ResponseField name="0" type="Success">
+  Execution successful - all requests, tests, and assertions passed
+</ResponseField>
+
+<ResponseField name="1" type="ERROR_FAILED_COLLECTION">
+  One or more assertions, tests, or requests failed during execution
+</ResponseField>
+
+<ResponseField name="2" type="ERROR_MISSING_OUTPUT_DIR">
+  The specified output directory does not exist
+</ResponseField>
+
+<ResponseField name="3" type="ERROR_INFINITE_LOOP">
+  The request chain caused an endless loop (more than 10,000 jumps detected)
+</ResponseField>
+
+<ResponseField name="4" type="ERROR_NOT_IN_COLLECTION">
+  Command was called outside of a collection root directory
+</ResponseField>
+
+<ResponseField name="5" type="ERROR_FILE_NOT_FOUND">
+  The specified file or path was not found
+</ResponseField>
+
+<ResponseField name="6" type="ERROR_ENV_NOT_FOUND">
+  The specified environment was not found
+</ResponseField>
+
+<ResponseField name="7" type="ERROR_MALFORMED_ENV_OVERRIDE">
+  Environment override not presented as string or object
+</ResponseField>
+
+<ResponseField name="8" type="ERROR_INCORRECT_ENV_OVERRIDE">
+  Environment override format incorrect (should be `name=value`)
+</ResponseField>
+
+<ResponseField name="9" type="ERROR_INCORRECT_OUTPUT_FORMAT">
+  Invalid output format requested (must be json, junit, or html)
+</ResponseField>
+
+<ResponseField name="10" type="ERROR_INVALID_FILE">
+  The specified file has an invalid format or cannot be parsed
+</ResponseField>
+
+<ResponseField name="11" type="ERROR_WORKSPACE_NOT_FOUND">
+  The specified workspace was not found or workspace.yml is missing
+</ResponseField>
+
+<ResponseField name="12" type="ERROR_GLOBAL_ENV_REQUIRES_WORKSPACE">
+  Global environment requires the collection to be in a workspace
+</ResponseField>
+
+<ResponseField name="13" type="ERROR_GLOBAL_ENV_NOT_FOUND">
+  The specified global environment was not found in the workspace
+</ResponseField>
+
+<ResponseField name="255" type="ERROR_GENERIC">
+  A generic error occurred during execution
+</ResponseField>
+
+## Examples
+
+### Basic Usage
+
+Run a single request:
+```bash
+bru run request.bru
+```
+
+Run all requests in a folder:
+```bash
+bru run folder
+```
+
+Run all requests in a folder recursively:
+```bash
+bru run folder -r
+```
+
+Run multiple paths:
+```bash
+bru run request.bru folder
+```
+
+### Environment Usage
+
+Run with a specific environment:
+```bash
+bru run request.bru --env local
+```
+
+Run with a custom environment file:
+```bash
+bru run request.bru --env-file env.bru
+```
+
+Run with global environment:
+```bash
+bru run request.bru --global-env production
+```
+
+Run with global environment from specific workspace:
+```bash
+bru run request.bru --global-env production --workspace-path /path/to/workspace
+```
+
+Override environment variables:
+```bash
+bru run request.bru --env local --env-var secret=xxx
+```
+
+### Output & Reporting
+
+Save results to JSON:
+```bash
+bru run request.bru --output results.json
+```
+
+Generate JUnit XML report:
+```bash
+bru run request.bru --output results.xml --format junit
+```
+
+Generate HTML report:
+```bash
+bru run request.bru --output results.html --format html
+```
+
+Generate multiple report formats:
+```bash
+bru run request.bru --reporter-junit results.xml --reporter-html results.html
+```
+
+### Reporter Filtering
+
+Omit all headers from output:
+```bash
+bru run --reporter-skip-all-headers
+```
+
+Skip specific headers:
+```bash
+bru run --reporter-skip-headers "Authorization"
+```
+
+Omit request bodies:
+```bash
+bru run --reporter-skip-request-body
+```
+
+Omit response bodies:
+```bash
+bru run --reporter-skip-response-body
+```
+
+Omit both request and response bodies:
+```bash
+bru run --reporter-skip-body
+```
+
+### Security & SSL
+
+Use custom CA certificate (in addition to default truststore):
+```bash
+bru run request.bru --cacert myCustomCA.pem
+```
+
+Use custom CA certificate exclusively:
+```bash
+bru run folder --cacert myCustomCA.pem --ignore-truststore
+```
+
+Run with client certificates:
+```bash
+bru run --client-cert-config client-cert-config.json
+```
+
+### Filtering & Control
+
+Run only requests with tests:
+```bash
+bru run request.bru --tests-only
+```
+
+Stop on first failure:
+```bash
+bru run folder --bail
+```
+
+Run requests with specific tags:
+```bash
+bru run folder --tags=hello,world --exclude-tags=skip
+```
+
+### Network Options
+
+Add delay between requests:
+```bash
+bru run folder --delay 1000
+```
+
+Disable system proxy:
+```bash
+bru run --noproxy
+```
+
+### Debugging
+
+Run with verbose output:
+```bash
+bru run request.bru --verbose
+```
+
+## Run Summary Output
+
+After execution, `bru run` displays a summary with the following information:
+
+- **Requests**: Total, passed, failed, errors, and skipped
+- **Pre-Request Tests**: Total, passed, and failed (if any)
+- **Post-Response Tests**: Total, passed, and failed (if any)
+- **Tests**: Total, passed, and failed
+- **Assertions**: Total, passed, and failed
+- **Total Time**: Cumulative response time for all requests
+
+Example output:
+```
+Requests:     5 passed, 0 failed, 0 error, 0 skipped, 5 total
+Tests:        12 passed, 0 failed, 12 total
+Assertions:   15 passed, 0 failed, 15 total
+
+Ran all requests - 2345 ms
+Wrote json results to results.json
+```

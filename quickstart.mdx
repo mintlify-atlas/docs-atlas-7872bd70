@@ -1,80 +1,488 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get started with Bruno in minutes. Create your first collection and make your first API request.
 ---
 
-## Get started in three steps
+## Introduction
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through creating your first API collection and making your first request with Bruno. You'll learn the basics of Bruno's interface and workflow.
 
-### Step 1: Set up your local environment
+<Info>
+Make sure you have [installed Bruno](/installation) before proceeding with this guide.
+</Info>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+## Creating Your First Collection
+
+<Steps>
+  <Step title="Launch Bruno">
+    Open Bruno from your applications menu or by running `bruno` in your terminal.
+  </Step>
+  
+  <Step title="Create a new collection">
+    1. Click "Create Collection" on the welcome screen
+    2. Choose a name for your collection (e.g., "My API Tests")
+    3. Select a location on your filesystem to store the collection
+    4. Click "Create"
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    <Tip>
+    Choose a location within a Git repository to automatically version control your API collections.
+    </Tip>
+  </Step>
+  
+  <Step title="Verify collection creation">
+    Your collection will appear in the left sidebar. Bruno created a folder at your chosen location with a `collection.bru` file.
+  </Step>
+</Steps>
+
+## Making Your First Request
+
+Let's make a simple GET request to test Bruno.
+
+<Steps>
+  <Step title="Create a new request">
+    1. Right-click on your collection name in the sidebar
+    2. Select "New Request"
+    3. Name it "Get Users"
+    4. Click "Create"
+  </Step>
+  
+  <Step title="Configure the request">
+    In the request editor:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    1. Select **GET** as the HTTP method (default)
+    2. Enter the URL: `https://jsonplaceholder.typicode.com/users`
+    3. Click the "Send" button
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```
+    GET https://jsonplaceholder.typicode.com/users
+    ```
+  </Step>
+  
+  <Step title="View the response">
+    You'll see the response in the right panel:
+    
+    - **Status**: 200 OK
+    - **Response Time**: ~100-500ms
+    - **Body**: JSON array of user objects
+    
+    The response will be formatted and syntax-highlighted automatically.
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+<Check>
+Congratulations! You've made your first API request with Bruno.
+</Check>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+## Understanding the Request File
 
-### Step 3: Go live
+Bruno saved your request as a `.bru` file. Let's look at what it contains:
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+```bru
+meta {
+  name: Get Users
+  type: http
+  seq: 1
+}
 
-## Next steps
+get {
+  url: https://jsonplaceholder.typicode.com/users
+  body: none
+  auth: none
+}
+```
 
-Now that you have your docs running, explore these key features:
+This plain text format makes it easy to:
+- Version control with Git
+- Review changes in pull requests
+- Share with team members
+- Edit directly in your code editor
+
+## Making a POST Request
+
+Let's create a more complex request with headers and a JSON body.
+
+<Steps>
+  <Step title="Create a POST request">
+    1. Right-click your collection
+    2. Select "New Request"
+    3. Name it "Create User"
+    4. Click "Create"
+  </Step>
+  
+  <Step title="Set the method and URL">
+    1. Change the method to **POST**
+    2. Enter URL: `https://jsonplaceholder.typicode.com/users`
+  </Step>
+  
+  <Step title="Add request headers">
+    Click on the "Headers" tab and add:
+    
+    | Key | Value |
+    |-----|-------|
+    | Content-Type | application/json |
+  </Step>
+  
+  <Step title="Add request body">
+    1. Click on the "Body" tab
+    2. Select "JSON" from the dropdown
+    3. Enter the following JSON:
+    
+    ```json
+    {
+      "name": "John Doe",
+      "email": "john@example.com",
+      "username": "johndoe"
+    }
+    ```
+  </Step>
+  
+  <Step title="Send the request">
+    Click "Send" and observe the response with the created user data.
+  </Step>
+</Steps>
+
+The `.bru` file now looks like this:
+
+```bru
+meta {
+  name: Create User
+  type: http
+  seq: 2
+}
+
+post {
+  url: https://jsonplaceholder.typicode.com/users
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "username": "johndoe"
+  }
+}
+```
+
+## Using Environment Variables
+
+Environment variables let you reuse values across requests and switch between environments (development, staging, production).
+
+<Steps>
+  <Step title="Create an environment">
+    1. Right-click on your collection
+    2. Select "Environments" > "Configure"
+    3. Click "Create Environment"
+    4. Name it "Development"
+  </Step>
+  
+  <Step title="Add variables">
+    Add the following variables:
+    
+    | Variable | Value |
+    |----------|-------|
+    | baseUrl | https://jsonplaceholder.typicode.com |
+    | apiKey | your-api-key-here |
+  </Step>
+  
+  <Step title="Use variables in requests">
+    Update your request URL to use the variable:
+    
+    ```
+    {{baseUrl}}/users
+    ```
+    
+    The variable will be replaced with its value when the request is sent.
+  </Step>
+  
+  <Step title="Select the environment">
+    In the top-right corner, select "Development" from the environment dropdown.
+  </Step>
+</Steps>
+
+Your environment is stored as `environments/Development.bru`:
+
+```bru
+vars {
+  baseUrl: https://jsonplaceholder.typicode.com
+  apiKey: your-api-key-here
+}
+```
+
+## Adding Tests and Assertions
+
+Bruno supports assertions and JavaScript tests to validate API responses.
+
+<Steps>
+  <Step title="Add simple assertions">
+    Click the "Assert" tab in your request and add:
+    
+    ```bru
+    res.status: eq 200
+    res.body.name: eq John Doe
+    ```
+  </Step>
+  
+  <Step title="Add JavaScript tests">
+    Click the "Tests" tab and add:
+    
+    ```javascript
+    test("should return valid user", function() {
+      const data = res.getBody();
+      expect(data).to.have.property('name');
+      expect(data.name).to.equal('John Doe');
+      expect(data.email).to.include('@');
+    });
+    ```
+  </Step>
+  
+  <Step title="Run and verify">
+    Send the request and check the "Tests" tab in the response panel to see test results.
+  </Step>
+</Steps>
+
+Your complete `.bru` file now includes tests:
+
+```bru
+meta {
+  name: Create User
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/users
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "username": "johndoe"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("should return valid user", function() {
+    const data = res.getBody();
+    expect(data).to.have.property('name');
+    expect(data.name).to.equal('John Doe');
+    expect(data.email).to.include('@');
+  });
+}
+```
+
+## Running Collections with CLI
+
+Bruno CLI allows you to run your entire collection from the command line.
+
+<Steps>
+  <Step title="Navigate to your collection">
+    ```bash
+    cd /path/to/your/collection
+    ```
+  </Step>
+  
+  <Step title="Run all requests">
+    ```bash
+    bru run
+    ```
+    
+    This executes all requests in your collection sequentially.
+  </Step>
+  
+  <Step title="Run specific requests">
+    ```bash
+    # Run a single request
+    bru run "Create User.bru"
+    
+    # Run requests in a folder
+    bru run folder-name
+    ```
+  </Step>
+  
+  <Step title="Use with environments">
+    ```bash
+    bru run --env Development
+    ```
+  </Step>
+  
+  <Step title="Save results">
+    ```bash
+    bru run --output results.json
+    ```
+  </Step>
+</Steps>
+
+<Info>
+The CLI is perfect for CI/CD pipelines. It returns exit code 0 on success and 1 if any tests fail.
+</Info>
+
+## Organizing Requests with Folders
+
+As your collection grows, organize requests into folders:
+
+<Steps>
+  <Step title="Create a folder">
+    1. Right-click on your collection
+    2. Select "New Folder"
+    3. Name it "Users"
+  </Step>
+  
+  <Step title="Move requests">
+    Drag and drop your user-related requests into the "Users" folder.
+  </Step>
+  
+  <Step title="Add folder-level scripts">
+    Right-click the folder and select "Edit Folder" to add pre-request scripts or tests that run for all requests in that folder.
+  </Step>
+</Steps>
+
+## Git Integration
+
+One of Bruno's biggest advantages is seamless Git integration.
+
+<Steps>
+  <Step title="Initialize Git (if not already)">
+    ```bash
+    cd /path/to/your/collection
+    git init
+    ```
+  </Step>
+  
+  <Step title="Create .gitignore">
+    Add a `.gitignore` file to exclude sensitive data:
+    
+    ```
+    # Ignore local environment secrets
+    environments/*.local.bru
+    ```
+  </Step>
+  
+  <Step title="Commit your collection">
+    ```bash
+    git add .
+    git commit -m "Add user API requests"
+    ```
+  </Step>
+  
+  <Step title="Collaborate with your team">
+    Push to a remote repository and share with your team:
+    
+    ```bash
+    git remote add origin <your-repo-url>
+    git push -u origin main
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+Team members can now clone the repository and immediately have access to all your API collections!
+</Tip>
+
+## Using Pre-Request Scripts
+
+Pre-request scripts run before a request is sent, useful for generating tokens or setting variables.
+
+```javascript
+// Click the "Pre Request" tab and add:
+
+// Generate a timestamp
+const timestamp = new Date().getTime();
+bru.setVar("timestamp", timestamp);
+
+// Generate a random request ID
+const requestId = require('uuid').v4();
+bru.setVar("requestId", requestId);
+
+// Set a computed value
+const signature = require('crypto-js').HmacSHA256(
+  timestamp + requestId,
+  bru.getEnvVar("secretKey")
+);
+bru.setVar("signature", signature.toString());
+```
+
+Then use these variables in your headers:
+
+```bru
+headers {
+  X-Timestamp: {{timestamp}}
+  X-Request-ID: {{requestId}}
+  X-Signature: {{signature}}
+}
+```
+
+## Next Steps
+
+You now know the basics of Bruno! Here's what to explore next:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Full Documentation" icon="book" href="https://docs.usebruno.com">
+    Explore advanced features and detailed guides.
+  </Card>
+  <Card title="CLI Documentation" icon="terminal" href="https://docs.usebruno.com/bru-cli/overview">
+    Learn more about automating tests with Bruno CLI.
+  </Card>
+  <Card title="Scripting Guide" icon="code" href="https://docs.usebruno.com/scripting/overview">
+    Master pre-request scripts and test scripts.
+  </Card>
+  <Card title="Community" icon="discord" href="https://discord.com/invite/KgcZUncpjq">
+    Join the Bruno community for help and discussions.
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Common CLI Commands Reference
+
+<CodeGroup>
+```bash Run entire collection
+bru run
+```
+
+```bash Run with environment
+bru run --env Production
+```
+
+```bash Run specific request
+bru run "Get Users.bru"
+```
+
+```bash Run folder
+bru run users
+```
+
+```bash Save results
+bru run --output results.json --format junit
+```
+
+```bash Override environment variable
+bru run --env-var "apiKey=test-key-123"
+```
+
+```bash Run with custom CA certificate
+bru run --cacert myCA.pem
+```
+
+```bash Stop on first failure
+bru run --bail
+```
+</CodeGroup>
+
+<Tip>
+Run `bru --help` to see all available CLI options and commands.
+</Tip>

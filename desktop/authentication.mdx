@@ -1,0 +1,600 @@
+---
+title: Authentication
+description: Complete guide to authentication methods in Bruno - Basic, Bearer, OAuth 2.0, API Key, AWS Sig v4, Digest, NTLM, and WSSE
+---
+
+Bruno supports multiple authentication methods that can be configured at the request, folder, or collection level. Auth settings are managed through the `Auth` component in the request pane and `CollectionSettings/Auth` for collection-level configuration.
+
+## Authentication Modes
+
+Bruno supports the following authentication types, as defined in `RequestPane/Auth/AuthMode`:
+
+<CardGroup cols={2}>
+  <Card title="Basic Auth" icon="user">
+    Username and password authentication using HTTP Basic Auth.
+  </Card>
+  <Card title="Bearer Token" icon="key">
+    Token-based authentication using the Authorization header.
+  </Card>
+  <Card title="OAuth 2.0" icon="shield-halved">
+    Industry-standard OAuth 2.0 with multiple grant types.
+  </Card>
+  <Card title="API Key" icon="fingerprint">
+    Custom API key in header, query param, or cookie.
+  </Card>
+  <Card title="AWS Sig v4" icon="aws">
+    Amazon Web Services signature version 4 authentication.
+  </Card>
+  <Card title="Digest Auth" icon="lock">
+    More secure alternative to Basic Auth using MD5 hashing.
+  </Card>
+  <Card title="NTLM Auth" icon="windows">
+    Windows NT LAN Manager authentication.
+  </Card>
+  <Card title="WSSE Auth" icon="shield">
+    WS-Security authentication for SOAP services.
+  </Card>
+</CardGroup>
+
+## Setting Authentication Mode
+
+Authentication can be configured at three levels:
+
+<Tabs>
+  <Tab title="Request Level">
+    Set authentication for a specific request in the **Auth** tab of the request pane.
+    
+    <Steps>
+      <Step title="Open Request Auth Tab">
+        Click on the "Auth" tab in the request pane.
+      </Step>
+      <Step title="Select Auth Mode">
+        Use the `AuthMode` dropdown to select an authentication type.
+      </Step>
+      <Step title="Configure Details">
+        Fill in the required fields for the selected auth method.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Folder Level">
+    Configure authentication for all requests in a folder.
+    
+    1. Right-click the folder and select "Settings"
+    2. Navigate to the "Auth" tab
+    3. Configure authentication (child requests use "Inherit" to apply it)
+  </Tab>
+  <Tab title="Collection Level">
+    Set default authentication for the entire collection in Collection Settings.
+    
+    The `CollectionSettings/Auth` component provides collection-wide auth configuration:
+    
+    ```text Info Message
+    Configures authentication for the entire collection. 
+    This applies to all requests using the 'Inherit' option 
+    in the Auth tab.
+    ```
+  </Tab>
+</Tabs>
+
+## Basic Authentication
+
+The `BasicAuth` component handles HTTP Basic Authentication:
+
+### Configuration
+
+<ParamField path="username" type="string" required>
+  Username for authentication. Supports variable interpolation: `{{username}}`
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  Password for authentication. Supports variable interpolation: `{{password}}`
+</ParamField>
+
+### Example in .bru File
+
+```bru
+meta {
+  name: Basic Auth Protected Endpoint
+  type: http
+}
+
+get {
+  url: {{host}}/api/protected
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+assert {
+  res.status: eq 200
+}
+```
+
+### Using Script for Basic Auth
+
+From the test suite (`bruno-tests/collection/auth/basic/via script/Basic Auth 200.bru`):
+
+```bru
+meta {
+  name: Basic Auth 200
+  type: http
+}
+
+post {
+  url: {{host}}/api/auth/basic/protected
+  body: json
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.message: Authentication successful
+}
+
+script:pre-request {
+  const username = "bruno";
+  const password = "della";
+  
+  const authString = `${username}:${password}`;
+  const encodedAuthString = require('btoa')(authString);
+  
+  req.setHeader("Authorization", `Basic ${encodedAuthString}`);
+}
+```
+
+<Tip>
+  Use pre-request scripts when you need dynamic Basic Auth credentials or custom encoding logic.
+</Tip>
+
+## Bearer Token
+
+The `BearerAuth` component handles Bearer token authentication:
+
+### Configuration
+
+<ParamField path="token" type="string" required>
+  Bearer token value. Supports variable interpolation: `{{access_token}}`
+</ParamField>
+
+### Example
+
+From the test suite:
+
+```bru bruno-tests/collection/auth/bearer/via auth/Bearer Auth 200.bru
+meta {
+  name: Bearer Auth 200
+  type: http
+}
+
+get {
+  url: {{host}}/api/auth/bearer/protected
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{bearer_auth_token}}
+}
+
+assert {
+  res.status: 200
+  res.body.message: Authentication successful
+}
+
+script:post-response {
+  bru.setEnvVar("foo", "bar");
+}
+```
+
+<Info>
+  Bearer tokens are automatically added to the `Authorization` header as `Bearer {token}`.
+</Info>
+
+## OAuth 2.0
+
+The `OAuth2` component provides comprehensive OAuth 2.0 support with multiple grant types:
+
+### Grant Types
+
+The `GrantTypeSelector` component supports four grant types:
+
+<Tabs>
+  <Tab title="Password Credentials">
+    Resource Owner Password Credentials flow.
+    
+    <ParamField path="accessTokenUrl" type="string" required>
+      Token endpoint URL
+    </ParamField>
+    <ParamField path="username" type="string" required>
+      Resource owner username
+    </ParamField>
+    <ParamField path="password" type="string" required>
+      Resource owner password
+    </ParamField>
+    <ParamField path="clientId" type="string">
+      OAuth client ID
+    </ParamField>
+    <ParamField path="clientSecret" type="string">
+      OAuth client secret
+    </ParamField>
+    <ParamField path="scope" type="string">
+      Requested scopes (space-separated)
+    </ParamField>
+  </Tab>
+  <Tab title="Authorization Code">
+    Authorization Code flow (default).
+    
+    Most secure OAuth 2.0 flow for web applications.
+    
+    <ParamField path="accessTokenUrl" type="string" required>
+      Token endpoint URL
+    </ParamField>
+    <ParamField path="clientId" type="string" required>
+      OAuth client ID
+    </ParamField>
+    <ParamField path="clientSecret" type="string" required>
+      OAuth client secret
+    </ParamField>
+    <ParamField path="scope" type="string">
+      Requested scopes
+    </ParamField>
+  </Tab>
+  <Tab title="Implicit">
+    Implicit flow (legacy, for SPAs).
+    
+    Less secure, token returned directly in URL.
+  </Tab>
+  <Tab title="Client Credentials">
+    Machine-to-machine authentication.
+    
+    <ParamField path="accessTokenUrl" type="string" required>
+      Token endpoint URL
+    </ParamField>
+    <ParamField path="clientId" type="string" required>
+      OAuth client ID
+    </ParamField>
+    <ParamField path="clientSecret" type="string" required>
+      OAuth client secret
+    </ParamField>
+    <ParamField path="scope" type="string">
+      Requested scopes
+    </ParamField>
+  </Tab>
+</Tabs>
+
+### OAuth 2.0 Configuration Options
+
+<ParamField path="credentialsPlacement" type="enum" default="body">
+  Where to send client credentials:
+  - `body`: In request body (default)
+  - `header`: In Authorization header
+</ParamField>
+
+<ParamField path="tokenPlacement" type="enum" default="header">
+  Where to include the access token:
+  - `header`: Authorization header (default)
+  - `query`: Query parameter
+</ParamField>
+
+<ParamField path="tokenHeaderPrefix" type="string" default="Bearer">
+  Prefix for token in Authorization header (e.g., "Bearer", "Token")
+</ParamField>
+
+<ParamField path="tokenQueryKey" type="string" default="access_token">
+  Query parameter name when tokenPlacement is "query"
+</ParamField>
+
+### OAuth 2.0 Example
+
+```bru
+meta {
+  name: OAuth 2.0 Protected API
+  type: http
+}
+
+get {
+  url: {{api_url}}/protected/resource
+  body: none
+  auth: oauth2
+}
+
+auth:oauth2 {
+  grantType: client_credentials
+  accessTokenUrl: https://auth.example.com/oauth/token
+  clientId: {{oauth_client_id}}
+  clientSecret: {{oauth_client_secret}}
+  scope: read:users write:users
+  tokenPlacement: header
+  tokenHeaderPrefix: Bearer
+}
+```
+
+## API Key Authentication
+
+The `ApiKeyAuth` component allows flexible API key placement:
+
+### Configuration
+
+<ParamField path="key" type="string" required>
+  API key parameter name (e.g., "X-API-Key", "api_key")
+</ParamField>
+
+<ParamField path="value" type="string" required>
+  API key value. Supports variables: `{{api_key}}`
+</ParamField>
+
+<ParamField path="placement" type="enum" required>
+  Where to send the API key:
+  - `header`: HTTP header
+  - `query`: Query parameter
+  - `cookie`: Cookie
+</ParamField>
+
+### Examples
+
+<CodeGroup>
+```bru Header API Key
+auth:apikey {
+  key: X-API-Key
+  value: {{api_key}}
+  placement: header
+}
+```
+
+```bru Query Parameter API Key
+auth:apikey {
+  key: api_key
+  value: {{api_key}}
+  placement: query
+}
+```
+
+```bru Cookie API Key
+auth:apikey {
+  key: session_token
+  value: {{session_token}}
+  placement: cookie
+}
+```
+</CodeGroup>
+
+## AWS Signature v4
+
+The `AwsV4Auth` component provides AWS authentication:
+
+### Configuration
+
+<ParamField path="accessKeyId" type="string" required>
+  AWS Access Key ID. Use `{{aws_access_key_id}}` for security.
+</ParamField>
+
+<ParamField path="secretAccessKey" type="string" required>
+  AWS Secret Access Key. Use `{{aws_secret_access_key}}` for security.
+</ParamField>
+
+<ParamField path="sessionToken" type="string">
+  Optional session token for temporary credentials.
+</ParamField>
+
+<ParamField path="service" type="string" required>
+  AWS service name (e.g., "s3", "execute-api", "lambda").
+</ParamField>
+
+<ParamField path="region" type="string" required>
+  AWS region (e.g., "us-east-1", "eu-west-1").
+</ParamField>
+
+### Example
+
+```bru
+meta {
+  name: AWS API Gateway Request
+  type: http
+}
+
+get {
+  url: https://api-id.execute-api.us-east-1.amazonaws.com/prod/resource
+  body: none
+  auth: awsv4
+}
+
+auth:awsv4 {
+  accessKeyId: {{aws_access_key_id}}
+  secretAccessKey: {{aws_secret_access_key}}
+  sessionToken: {{aws_session_token}}
+  service: execute-api
+  region: us-east-1
+}
+```
+
+<Warning>
+  Never commit AWS credentials to version control. Always use environment variables or secure secret management.
+</Warning>
+
+## Digest Authentication
+
+The `DigestAuth` component provides more secure authentication than Basic Auth:
+
+### Configuration
+
+<ParamField path="username" type="string" required>
+  Username for Digest authentication
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  Password for Digest authentication
+</ParamField>
+
+### Example
+
+```bru
+meta {
+  name: Digest Auth Request
+  type: http
+}
+
+get {
+  url: {{host}}/digest-protected
+  body: none
+  auth: digest
+}
+
+auth:digest {
+  username: {{digest_username}}
+  password: {{digest_password}}
+}
+```
+
+## NTLM Authentication
+
+The `NTLMAuth` component provides Windows NTLM authentication:
+
+### Configuration
+
+<ParamField path="username" type="string" required>
+  Windows username (may include domain: DOMAIN\username)
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  Windows password
+</ParamField>
+
+### Example
+
+```bru
+auth:ntlm {
+  username: DOMAIN\{{windows_user}}
+  password: {{windows_password}}
+}
+```
+
+## WSSE Authentication
+
+The `WsseAuth` component provides WS-Security authentication:
+
+### Configuration
+
+<ParamField path="username" type="string" required>
+  WSSE username
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  WSSE password
+</ParamField>
+
+## Authentication Inheritance
+
+Bruno supports authentication inheritance through the collection hierarchy:
+
+<Steps>
+  <Step title="Set Collection-Level Auth">
+    Configure authentication in Collection Settings → Auth tab.
+  </Step>
+  <Step title="Use 'Inherit' in Requests">
+    In request Auth tab, select "Inherit" mode to use collection/folder auth.
+  </Step>
+  <Step title="Override When Needed">
+    Individual requests can override inherited auth by selecting a different mode.
+  </Step>
+</Steps>
+
+### Inheritance Example
+
+```text Collection Structure
+API Collection (Auth: Bearer Token)
+├── Users Folder (Auth: Inherit)
+│   ├── Get Users (Auth: Inherit) ← Uses collection Bearer token
+│   └── Create User (Auth: Inherit) ← Uses collection Bearer token
+└── Public Folder (Auth: None)
+    └── Health Check (Auth: None) ← No authentication
+```
+
+The collection-level auth in `collection.bru`:
+
+```bru
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{bearer_auth_token}}
+}
+```
+
+## Using Variables for Security
+
+<AccordionGroup>
+  <Accordion title="Environment Variables">
+    Store sensitive credentials in environment variables:
+    
+    ```json environments/production.json
+    {
+      "api_key": "sk_live_...",
+      "oauth_client_secret": "secret_...",
+      "aws_secret_access_key": "..."
+    }
+    ```
+  </Accordion>
+  <Accordion title=".gitignore Environments">
+    Add environment files to `.gitignore` to prevent committing secrets:
+    
+    ```text .gitignore
+    environments/*.json
+    !environments/example.json
+    ```
+  </Accordion>
+  <Accordion title="Runtime Variable Setting">
+    Use pre-request scripts to fetch tokens dynamically:
+    
+    ```javascript
+    // Fetch token from auth service
+    const authRes = await axios.post('https://auth.example.com/token', {
+      client_id: bru.getEnvVar('client_id'),
+      client_secret: bru.getEnvVar('client_secret')
+    });
+    
+    bru.setVar('access_token', authRes.data.access_token);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Inheritance">
+    Configure auth at the collection or folder level to avoid duplication and ensure consistency.
+  </Accordion>
+  <Accordion title="Store Secrets Securely">
+    Never hardcode credentials. Use `{{variables}}` that reference environment-specific values.
+  </Accordion>
+  <Accordion title="Rotate Tokens in Scripts">
+    For OAuth 2.0, use post-response scripts to capture and store new access tokens automatically.
+  </Accordion>
+  <Accordion title="Test Auth Failures">
+    Create separate requests to test 401/403 responses with invalid credentials.
+  </Accordion>
+  <Accordion title="Document Required Scopes">
+    Use the Docs tab to document which OAuth scopes or API key permissions are needed.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Scripts" icon="scroll" href="/desktop/scripts">
+    Learn how to automate auth token refresh with scripts
+  </Card>
+  <Card title="Collection Settings" icon="sliders" href="/desktop/collection-settings">
+    Configure collection-level authentication
+  </Card>
+  <Card title="Environment Variables" icon="leaf" href="/concepts/environments">
+    Manage auth credentials across environments
+  </Card>
+  <Card title="Tests" icon="flask-vial" href="/desktop/tests">
+    Write tests to validate authentication
+  </Card>
+</CardGroup>

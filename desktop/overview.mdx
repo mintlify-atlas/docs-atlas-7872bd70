@@ -1,0 +1,169 @@
+---
+title: Desktop App Overview
+description: Getting started with the Bruno desktop application - your lightweight, open-source API client built with Electron and React
+---
+
+Bruno is a fast, Git-friendly desktop application for exploring and testing APIs. Unlike cloud-based API clients, Bruno stores your collections directly on your filesystem, making it perfect for version control and team collaboration.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Git-Friendly" icon="git-alt">
+    Collections are stored as plain text files in your filesystem, making them easy to version control with Git.
+  </Card>
+  <Card title="Offline-First" icon="wifi-slash">
+    No cloud sync required. Your data stays on your machine. Work anywhere, even without internet.
+  </Card>
+  <Card title="Multiple Protocols" icon="network-wired">
+    Support for REST, GraphQL, gRPC, and WebSocket requests in a single application.
+  </Card>
+  <Card title="Scripting & Testing" icon="code">
+    Powerful JavaScript-based pre-request scripts, post-response scripts, and test assertions.
+  </Card>
+</CardGroup>
+
+## Technology Stack
+
+Bruno is built using modern web technologies:
+
+- **Framework**: Electron (desktop) + React (UI)
+- **State Management**: Redux
+- **Styling**: Tailwind CSS
+- **Code Editor**: CodeMirror
+- **HTTP Client**: Axios
+- **Icons**: Tabler Icons
+- **File Watching**: Chokidar
+
+## Application Structure
+
+The Bruno desktop app consists of several key areas:
+
+### Sidebar
+
+The left sidebar displays your collections, folders, and requests in a tree structure:
+
+<Steps>
+  <Step title="Collections">
+    Top-level containers for related API requests. Each collection maps to a folder on your filesystem.
+  </Step>
+  <Step title="Folders">
+    Organize requests within collections. Folders can be nested and support inheritance of auth, headers, and scripts.
+  </Step>
+  <Step title="Requests">
+    Individual API requests (HTTP, GraphQL, gRPC, WebSocket). Click to open in a new tab.
+  </Step>
+</Steps>
+
+### Request Pane
+
+The main area where you configure your API requests:
+
+- **Query URL**: Enter the endpoint URL with variable interpolation support
+- **Tabs**: Params, Body, Headers, Auth, Vars, Script, Assert, Tests, Docs, Settings
+- **Method Selector**: GET, POST, PUT, PATCH, DELETE, etc.
+
+### Response Pane
+
+Displays the response from your API:
+
+- Response body (formatted JSON, XML, HTML, or raw text)
+- Headers
+- Timeline and performance metrics
+- Test results
+- Console output from scripts
+
+### Status Bar
+
+Shows collection information, environment selection, and shortcuts to preferences.
+
+## File Format
+
+Bruno uses a custom `.bru` file format that's human-readable and Git-friendly:
+
+```bru
+meta {
+  name: Get Users
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{api_url}}/users
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.users: isDefined
+}
+
+script:pre-request {
+  // Set dynamic timestamp
+  bru.setVar('timestamp', Date.now());
+}
+
+tests {
+  test("Users array should not be empty", function() {
+    expect(res.body.users).to.be.an('array');
+    expect(res.body.users.length).to.be.greaterThan(0);
+  });
+}
+```
+
+## Collections vs Workspaces
+
+<Accordion title="Understanding Collections">
+  A **collection** is a folder on your filesystem containing `.bru` files and a `bruno.json` configuration file. Collections are self-contained and can be shared via Git.
+</Accordion>
+
+<Accordion title="Understanding Workspaces">
+  A **workspace** is a way to organize multiple collections in Bruno. You can have multiple workspaces (e.g., "Work", "Personal") and switch between them.
+</Accordion>
+
+## Keyboard Shortcuts
+
+<AccordionGroup>
+  <Accordion title="Request Actions">
+    - **Cmd/Ctrl + Enter**: Send request
+    - **Cmd/Ctrl + S**: Save request
+    - **Cmd/Ctrl + T**: New request tab
+    - **Cmd/Ctrl + W**: Close current tab
+  </Accordion>
+  <Accordion title="Sidebar Actions">
+    - **Cmd/Ctrl + N**: New request
+    - **Cmd/Ctrl + Shift + N**: New folder
+    - **Cmd/Ctrl + F**: Search in sidebar
+    - **F2**: Rename selected item
+  </Accordion>
+  <Accordion title="Navigation">
+    - **Cmd/Ctrl + 1-9**: Switch between tabs
+    - **Cmd/Ctrl + Shift + [**: Previous tab
+    - **Cmd/Ctrl + Shift + ]**: Next tab
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Creating Requests" icon="plus" href="/desktop/creating-requests">
+    Learn how to create and configure API requests
+  </Card>
+  <Card title="Request Types" icon="list" href="/desktop/request-types">
+    Explore REST, GraphQL, gRPC, and WebSocket support
+  </Card>
+  <Card title="Authentication" icon="lock" href="/desktop/authentication">
+    Configure authentication for your requests
+  </Card>
+  <Card title="Scripts & Tests" icon="flask" href="/desktop/scripts">
+    Add automation with pre-request and post-response scripts
+  </Card>
+</CardGroup>
+
+<Note>
+  Bruno's desktop app is completely offline and privacy-focused. Your data never leaves your machine unless you explicitly share it.
+</Note>

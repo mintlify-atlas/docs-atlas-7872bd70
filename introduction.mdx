@@ -1,0 +1,140 @@
+---
+title: Introduction to Bruno
+description: Bruno is an open-source API client that stores collections directly on your filesystem, enabling Git collaboration and offline-first development.
+---
+
+## Welcome to Bruno
+
+Bruno is a new and innovative API client, aimed at revolutionizing the status quo represented by Postman and similar tools. Built with React and Electron, Bruno brings a fresh approach to API development and testing.
+
+<CardGroup cols={2}>
+  <Card title="Offline-First" icon="wifi-slash">
+    No cloud sync, ever. Your data stays on your device, ensuring complete privacy and control.
+  </Card>
+  <Card title="Git-Native" icon="code-branch">
+    Collections stored as plain text files in a folder, making version control seamless with Git or any VCS.
+  </Card>
+  <Card title="Cross-Platform" icon="desktop">
+    Run Bruno on Mac, Windows, and Linux with native installers and package managers.
+  </Card>
+  <Card title="Developer-Friendly" icon="code">
+    Built using React and Electron with a focus on developer experience and modern workflows.
+  </Card>
+</CardGroup>
+
+## Why Bruno?
+
+### Collections as Code
+
+Bruno stores your API collections directly in a folder on your filesystem using a plain text markup language called **Bru**. This means:
+
+- Version control your API collections with Git
+- Collaborate with your team using pull requests
+- Review API changes in your standard code review workflow
+- No vendor lock-in - your data is always accessible
+
+### Privacy-First Design
+
+Bruno is **offline-only**. There are no plans to add cloud-sync to Bruno, ever. We value your data privacy and believe it should stay on your device.
+
+<Info>
+Read our long-term vision on [data privacy and sustainability](https://github.com/usebruno/bruno/discussions/269).
+</Info>
+
+## The Bru Language
+
+Bruno uses a simple, readable format for storing API requests. Here's an example:
+
+```bru
+meta {
+  name: echo json
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/api/echo/json
+  body: json
+  auth: none
+}
+
+headers {
+  foo: bar
+}
+
+body:json {
+  {
+    "hello": "bruno"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+script:pre-request {
+  bru.setVar("foo", "bar");
+}
+
+tests {
+  test("should return json", function() {
+    const data = res.getBody();
+    expect(res.getBody()).to.eql({
+      "hello": "bruno"
+    });
+  });
+}
+```
+
+## Technology Stack
+
+Bruno is built with modern, battle-tested technologies:
+
+- **Frontend**: React with Tailwind CSS
+- **Desktop**: Electron
+- **State Management**: Redux
+- **Code Editors**: CodeMirror
+- **Icons**: Tabler Icons
+- **Forms**: Formik with Yup validation
+- **HTTP Client**: Axios
+- **File Watching**: Chokidar
+- **Internationalization**: i18next
+
+## Open Source & Sustainability
+
+The majority of Bruno's features are free and open source. We strive to strike a harmonious balance between open-source principles and sustainability.
+
+<Card title="Explore Commercial Features" icon="sparkles" href="https://www.usebruno.com/pricing">
+  Check out our paid versions to see if there are additional features that you or your team may find useful.
+</Card>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Install Bruno" icon="download" href="/installation">
+    Get Bruno installed on your machine in minutes.
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Make your first API request with Bruno.
+  </Card>
+  <Card title="Documentation" icon="book" href="https://docs.usebruno.com">
+    Explore the full documentation.
+  </Card>
+  <Card title="Join Community" icon="discord" href="https://discord.com/invite/KgcZUncpjq">
+    Get help and connect with other Bruno users.
+  </Card>
+</CardGroup>
+
+## Community & Support
+
+Join thousands of developers using Bruno:
+
+- [GitHub Discussions](https://github.com/usebruno/bruno/discussions)
+- [Discord Community](https://discord.com/invite/KgcZUncpjq)
+- [Stack Overflow](https://stackoverflow.com/questions/tagged/bruno)
+- [Twitter/X](https://twitter.com/use_bruno)
+- [LinkedIn](https://www.linkedin.com/company/usebruno)
+
+<Tip>
+If Bruno has helped you at work and your teams, please share your [testimonials on GitHub](https://github.com/usebruno/bruno/discussions/343).
+</Tip>

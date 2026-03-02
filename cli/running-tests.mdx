@@ -1,0 +1,408 @@
+---
+title: Running API Tests
+description: Execute your Bruno API tests from the command line with various options and configurations
+---
+
+# Running API Tests
+
+The `bru run` command executes your API requests and tests from the command line. You can run individual requests, folders, or entire collections.
+
+## Basic Usage
+
+Navigate to your collection directory and run:
+
+```bash
+bru run
+```
+
+This runs all requests in the current collection directory.
+
+## Running Specific Requests
+
+### Single Request
+
+Run a specific `.bru` file:
+
+```bash
+bru run request.bru
+```
+
+### Folder
+
+Run all requests in a folder:
+
+```bash
+bru run auth
+```
+
+### Folder (Recursive)
+
+Run all requests in a folder and its subfolders:
+
+```bash
+bru run auth -r
+```
+
+### Multiple Paths
+
+Run multiple requests and folders:
+
+```bash
+bru run auth/login.bru users payments -r
+```
+
+## Working with Environments
+
+### Using Collection Environments
+
+Run with a specific environment:
+
+```bash
+bru run --env production
+```
+
+The CLI looks for the environment file in `environments/production.bru` (or `.yml` for OpenCollection format).
+
+### Using Environment Files
+
+Load environment from a custom file:
+
+```bash
+bru run --env-file custom-env.bru
+```
+
+Supported formats:
+- `.bru` - Bruno environment format
+- `.json` - JSON format
+- `.yml`/`.yaml` - YAML format
+
+### Global Environments
+
+Use a global environment from a workspace:
+
+```bash
+bru run --global-env production
+```
+
+Specify workspace path if not auto-detected:
+
+```bash
+bru run --global-env production --workspace-path /path/to/workspace
+```
+
+### Overriding Variables
+
+Override specific environment variables:
+
+```bash
+bru run --env staging --env-var apiKey=secret123
+```
+
+Override multiple variables:
+
+```bash
+bru run --env staging --env-var apiKey=secret123 --env-var baseUrl=https://api.test.com
+```
+
+## Output and Reporting
+
+### JSON Output
+
+Save results as JSON:
+
+```bash
+bru run --output results.json
+```
+
+Or using the reporter flag:
+
+```bash
+bru run --reporter-json results.json
+```
+
+### JUnit XML Output
+
+Generate JUnit-compatible XML for CI/CD:
+
+```bash
+bru run --output results.xml --format junit
+```
+
+Or:
+
+```bash
+bru run --reporter-junit results.xml
+```
+
+### HTML Report
+
+Generate an HTML report:
+
+```bash
+bru run --output report.html --format html
+```
+
+Or:
+
+```bash
+bru run --reporter-html report.html
+```
+
+### Multiple Reports
+
+Generate multiple report formats simultaneously:
+
+```bash
+bru run --reporter-json results.json --reporter-junit results.xml --reporter-html report.html
+```
+
+## Security Options
+
+### Custom CA Certificates
+
+Add a custom CA certificate:
+
+```bash
+bru run --cacert myCustomCA.pem
+```
+
+Use custom CA exclusively (ignore default truststore):
+
+```bash
+bru run --cacert myCustomCA.pem --ignore-truststore
+```
+
+### Client Certificates
+
+Use client certificates for authentication:
+
+```bash
+bru run --client-cert-config client-cert-config.json
+```
+
+The config file format:
+
+```json client-cert-config.json
+{
+  "enabled": true,
+  "certs": [
+    {
+      "domain": "https://api.example.com",
+      "certFilePath": "/path/to/cert.pem",
+      "keyFilePath": "/path/to/key.pem",
+      "passphrase": "optional-passphrase"
+    }
+  ]
+}
+```
+
+### Insecure Connections
+
+Allow insecure server connections (skip SSL verification):
+
+<Warning>
+Only use this in development/testing environments. Never in production.
+</Warning>
+
+```bash
+bru run --insecure
+```
+
+## Execution Control
+
+### Run Only Requests with Tests
+
+Skip requests that don't have tests or assertions:
+
+```bash
+bru run --tests-only
+```
+
+### Bail on Failure
+
+Stop execution immediately after any failure:
+
+```bash
+bru run --bail
+```
+
+### Delay Between Requests
+
+Add a delay (in milliseconds) between each request:
+
+```bash
+bru run --delay 1000
+```
+
+This adds a 1-second delay between requests.
+
+### Tag-Based Filtering
+
+Run only requests with specific tags:
+
+```bash
+bru run --tags=smoke,critical
+```
+
+Exclude requests with certain tags:
+
+```bash
+bru run --tags=api --exclude-tags=skip,wip
+```
+
+## Proxy Configuration
+
+### Disable Proxy
+
+Disable all proxy settings:
+
+```bash
+bru run --noproxy
+```
+
+This disables both collection-defined proxies and system proxies.
+
+## JavaScript Sandbox
+
+Choose the JavaScript runtime for scripts:
+
+```bash
+bru run --sandbox safe
+```
+
+Options:
+- `safe` (default) - Uses QuickJS for security
+- `developer` - Uses Node.js VM for more features
+
+## Customizing Reporter Output
+
+### Skip Headers
+
+Omit all headers from reports:
+
+```bash
+bru run --reporter-skip-all-headers
+```
+
+Skip specific headers:
+
+```bash
+bru run --reporter-skip-headers Authorization Cookie
+```
+
+### Skip Request/Response Bodies
+
+Omit request bodies:
+
+```bash
+bru run --reporter-skip-request-body
+```
+
+Omit response bodies:
+
+```bash
+bru run --reporter-skip-response-body
+```
+
+Omit both:
+
+```bash
+bru run --reporter-skip-body
+```
+
+## Cookie Management
+
+Disable automatic cookie handling:
+
+```bash
+bru run --disable-cookies
+```
+
+## Verbose Output
+
+Enable verbose output for debugging:
+
+```bash
+bru run --verbose
+```
+
+## Understanding Test Results
+
+After execution, you'll see a summary:
+
+```
+Requests:     10 passed, 0 failed, 10 total
+Tests:        25 passed, 0 failed, 25 total
+Assertions:   42 passed, 0 failed, 42 total
+
+Ran all requests - 2547 ms
+```
+
+The CLI reports:
+- **Requests** - HTTP request execution status
+- **Pre-Request Tests** - Tests run before the request
+- **Post-Response Tests** - Tests run after the response
+- **Tests** - General test results
+- **Assertions** - Assertion results
+
+## Common Examples
+
+### CI/CD Pipeline
+
+```bash
+bru run \
+  --env production \
+  --reporter-junit results.xml \
+  --reporter-html report.html \
+  --bail
+```
+
+### Development Testing
+
+```bash
+bru run \
+  --env local \
+  --env-var apiKey=$DEV_API_KEY \
+  --tests-only \
+  --verbose
+```
+
+### Smoke Tests
+
+```bash
+bru run \
+  --tags=smoke \
+  --env staging \
+  --bail \
+  --reporter-json smoke-results.json
+```
+
+### Testing with Custom Certificates
+
+```bash
+bru run \
+  --env internal \
+  --cacert corporate-ca.pem \
+  --client-cert-config client-certs.json
+```
+
+## Exit Codes
+
+The CLI returns different exit codes for automation:
+
+```bash
+bru run || echo "Tests failed with code: $?"
+```
+
+See the [CLI Overview](/cli/overview#exit-codes) for all exit codes.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CLI Options Reference" icon="book" href="/cli/options">
+    Complete reference of all CLI flags and options
+  </Card>
+  <Card title="Importing Collections" icon="file-import" href="/cli/importing-collections">
+    Import collections from OpenAPI and other formats
+  </Card>
+</CardGroup>

@@ -1,0 +1,712 @@
+---
+title: Post-response Scripts
+description: API reference for post-response scripts and the bru object
+---
+
+Post-response scripts execute after receiving the HTTP response, allowing you to extract data, save variables, and process the response.
+
+## Available Objects
+
+In post-response scripts, you have access to:
+
+- `bru` - Main Bruno API object
+- `req` - Request object (read-only)
+- `res` - Response object
+- `test` - Test function
+- `expect` / `assert` - Chai assertion libraries
+- `console` - Logging functions
+
+## Response Object (res)
+
+The `res` object represents the HTTP response received from the server.
+
+### Properties
+
+<ResponseField name="res.status" type="number">
+  HTTP status code (e.g., 200, 404, 500)
+</ResponseField>
+
+<ResponseField name="res.statusText" type="string">
+  HTTP status text (e.g., "OK", "Not Found")
+</ResponseField>
+
+<ResponseField name="res.headers" type="object">
+  Response headers as key-value pairs
+</ResponseField>
+
+<ResponseField name="res.body" type="any">
+  Response body (automatically parsed if JSON)
+</ResponseField>
+
+<ResponseField name="res.responseTime" type="number">
+  Response time in milliseconds
+</ResponseField>
+
+<ResponseField name="res.url" type="string">
+  Final URL after redirects
+</ResponseField>
+
+### Methods
+
+<ParamField path="res.getStatus()" type="function">
+  Returns the HTTP status code
+  
+  ```javascript
+  const status = res.getStatus();
+  if (status === 200) {
+    console.log('Request successful');
+  }
+  ```
+</ParamField>
+
+<ParamField path="res.getStatusText()" type="function">
+  Returns the HTTP status text
+  
+  ```javascript
+  const statusText = res.getStatusText();
+  // Returns: "OK"
+  ```
+</ParamField>
+
+<ParamField path="res.getHeader(name)" type="function">
+  Gets a specific response header
+  
+  **Parameters:**
+  - `name` (string) - Header name
+  
+  ```javascript
+  const contentType = res.getHeader('content-type');
+  const rateLimit = res.getHeader('x-rate-limit-remaining');
+  ```
+</ParamField>
+
+<ParamField path="res.getHeaders()" type="function">
+  Returns all response headers as an object
+  
+  ```javascript
+  const headers = res.getHeaders();
+  console.log('Response headers:', headers);
+  ```
+</ParamField>
+
+<ParamField path="res.getBody()" type="function">
+  Returns the response body (automatically parsed if JSON)
+  
+  ```javascript
+  const body = res.getBody();
+  console.log('User ID:', body.userId);
+  ```
+</ParamField>
+
+<ParamField path="res.setBody(data)" type="function">
+  Modifies the response body
+  
+  **Parameters:**
+  - `data` (any) - New body data
+  
+  ```javascript
+  // Modify response data
+  const body = res.getBody();
+  body.processed = true;
+  body.processedAt = Date.now();
+  res.setBody(body);
+  ```
+</ParamField>
+
+<ParamField path="res.getResponseTime()" type="function">
+  Returns the response time in milliseconds
+  
+  ```javascript
+  const time = res.getResponseTime();
+  console.log(`Request took ${time}ms`);
+  
+  if (time > 1000) {
+    console.warn('Slow response detected');
+  }
+  ```
+</ParamField>
+
+<ParamField path="res.getUrl()" type="function">
+  Returns the final URL (useful after redirects)
+  
+  ```javascript
+  const finalUrl = res.getUrl();
+  ```
+</ParamField>
+
+<ParamField path="res.getSize()" type="function">
+  Returns size information about the response
+  
+  Returns an object with:
+  - `header` - Size of headers in bytes
+  - `body` - Size of body in bytes
+  - `total` - Total size in bytes
+  
+  ```javascript
+  const size = res.getSize();
+  console.log(`Response size: ${size.total} bytes`);
+  console.log(`Headers: ${size.header} bytes, Body: ${size.body} bytes`);
+  ```
+</ParamField>
+
+<ParamField path="res.getDataBuffer()" type="function">
+  Returns the raw response data as a Buffer
+  
+  ```javascript
+  const buffer = res.getDataBuffer();
+  // Useful for binary data
+  ```
+</ParamField>
+
+<ParamField path="res(path)" type="function">
+  Query the response body using dot notation (callable response)
+  
+  **Parameters:**
+  - `path` (string) - Dot-notation path to query
+  
+  ```javascript
+  // Instead of res.getBody().user.name
+  const userName = res('user.name');
+  
+  // Query arrays
+  const firstItem = res('items[0].title');
+  ```
+</ParamField>
+
+## Bruno Object (bru)
+
+The `bru` object provides the main Bruno API for managing variables, environment, and request flow.
+
+### Variable Management
+
+<AccordionGroup>
+  <Accordion title="Runtime Variables" icon="bolt">
+    Runtime variables exist only during the current request/collection run.
+    
+    <ParamField path="bru.setVar(key, value)" type="function">
+      Sets a runtime variable
+      
+      ```javascript
+      bru.setVar('userId', 123);
+      bru.setVar('token', 'abc123');
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.getVar(key)" type="function">
+      Gets a runtime variable (with interpolation)
+      
+      ```javascript
+      const userId = bru.getVar('userId');
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.hasVar(key)" type="function">
+      Checks if a runtime variable exists
+      
+      ```javascript
+      if (bru.hasVar('userId')) {
+        console.log('User ID is set');
+      }
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.deleteVar(key)" type="function">
+      Deletes a runtime variable
+      
+      ```javascript
+      bru.deleteVar('userId');
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.getAllVars()" type="function">
+      Returns all runtime variables
+      
+      ```javascript
+      const allVars = bru.getAllVars();
+      console.log('Runtime vars:', allVars);
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.deleteAllVars()" type="function">
+      Deletes all runtime variables
+      
+      ```javascript
+      bru.deleteAllVars();
+      ```
+    </ParamField>
+  </Accordion>
+  
+  <Accordion title="Environment Variables" icon="earth">
+    Environment variables are associated with the selected environment.
+    
+    <ParamField path="bru.setEnvVar(key, value, options)" type="function">
+      Sets an environment variable
+      
+      **Parameters:**
+      - `key` (string) - Variable name
+      - `value` (string) - Variable value
+      - `options.persist` (boolean) - If true, saves to environment file
+      
+      ```javascript
+      // Temporary (in-memory only)
+      bru.setEnvVar('session_token', token);
+      
+      // Persistent (saved to file)
+      bru.setEnvVar('api_key', key, { persist: true });
+      ```
+      
+      <Warning>
+      When `persist: true`, only string values are allowed. Non-string values will throw an error.
+      </Warning>
+    </ParamField>
+    
+    <ParamField path="bru.getEnvVar(key)" type="function">
+      Gets an environment variable
+      
+      ```javascript
+      const apiKey = bru.getEnvVar('api_key');
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.hasEnvVar(key)" type="function">
+      Checks if an environment variable exists
+      
+      ```javascript
+      if (bru.hasEnvVar('api_key')) {
+        // Use API key
+      }
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.deleteEnvVar(key)" type="function">
+      Deletes an environment variable
+      
+      ```javascript
+      bru.deleteEnvVar('old_token');
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.getAllEnvVars()" type="function">
+      Returns all environment variables (excluding `__name__`)
+      
+      ```javascript
+      const envVars = bru.getAllEnvVars();
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.deleteAllEnvVars()" type="function">
+      Deletes all environment variables
+      
+      ```javascript
+      bru.deleteAllEnvVars();
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.getEnvName()" type="function">
+      Returns the name of the active environment
+      
+      ```javascript
+      const envName = bru.getEnvName();
+      console.log('Current environment:', envName);
+      ```
+    </ParamField>
+  </Accordion>
+  
+  <Accordion title="Global Environment Variables" icon="globe">
+    Global environment variables are shared across all environments.
+    
+    <ParamField path="bru.setGlobalEnvVar(key, value)" type="function">
+      Sets a global environment variable
+      
+      ```javascript
+      bru.setGlobalEnvVar('base_url', 'https://api.example.com');
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.getGlobalEnvVar(key)" type="function">
+      Gets a global environment variable
+      
+      ```javascript
+      const baseUrl = bru.getGlobalEnvVar('base_url');
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.deleteGlobalEnvVar(key)" type="function">
+      Deletes a global environment variable
+    </ParamField>
+    
+    <ParamField path="bru.getAllGlobalEnvVars()" type="function">
+      Returns all global environment variables
+    </ParamField>
+    
+    <ParamField path="bru.deleteAllGlobalEnvVars()" type="function">
+      Deletes all global environment variables
+    </ParamField>
+  </Accordion>
+  
+  <Accordion title="Collection Variables" icon="folder">
+    Collection-level variables defined in collection settings.
+    
+    <ParamField path="bru.setCollectionVar(key, value)" type="function">
+      Sets a collection variable
+      
+      ```javascript
+      bru.setCollectionVar('version', 'v2');
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.getCollectionVar(key)" type="function">
+      Gets a collection variable
+      
+      ```javascript
+      const version = bru.getCollectionVar('version');
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.hasCollectionVar(key)" type="function">
+      Checks if a collection variable exists
+    </ParamField>
+    
+    <ParamField path="bru.deleteCollectionVar(key)" type="function">
+      Deletes a collection variable
+    </ParamField>
+    
+    <ParamField path="bru.getAllCollectionVars()" type="function">
+      Returns all collection variables
+    </ParamField>
+    
+    <ParamField path="bru.deleteAllCollectionVars()" type="function">
+      Deletes all collection variables
+    </ParamField>
+  </Accordion>
+  
+  <Accordion title="Folder & Request Variables" icon="file">
+    Read-only access to folder and request-level variables.
+    
+    <ParamField path="bru.getFolderVar(key)" type="function">
+      Gets a folder-level variable
+      
+      ```javascript
+      const folderVar = bru.getFolderVar('folder_setting');
+      ```
+    </ParamField>
+    
+    <ParamField path="bru.getRequestVar(key)" type="function">
+      Gets a request-level variable
+      
+      ```javascript
+      const requestVar = bru.getRequestVar('request_setting');
+      ```
+    </ParamField>
+  </Accordion>
+</AccordionGroup>
+
+### OAuth2 Credentials
+
+<ParamField path="bru.getOauth2CredentialVar(key)" type="function">
+  Gets an OAuth2 credential variable
+  
+  ```javascript
+  const accessToken = bru.getOauth2CredentialVar('$oauth2.my-credential.access_token');
+  ```
+</ParamField>
+
+<ParamField path="bru.resetOauth2Credential(credentialId)" type="function">
+  Resets OAuth2 credentials (clears access/refresh tokens)
+  
+  **Parameters:**
+  - `credentialId` (string) - The credential ID to reset
+  
+  ```javascript
+  bru.resetOauth2Credential('my-credential');
+  ```
+</ParamField>
+
+### Request Flow Control
+
+<ParamField path="bru.runner.skipRequest()" type="function">
+  Skips the current request (only in collection runs)
+  
+  ```javascript
+  script:pre-request {
+    if (bru.getEnvVar('skip_auth_requests')) {
+      bru.runner.skipRequest();
+    }
+  }
+  ```
+</ParamField>
+
+<ParamField path="bru.runner.stopExecution()" type="function">
+  Stops the entire collection run
+  
+  ```javascript
+  script:post-response {
+    if (res.getStatus() === 401) {
+      console.log('Authentication failed, stopping execution');
+      bru.runner.stopExecution();
+    }
+  }
+  ```
+</ParamField>
+
+<ParamField path="bru.setNextRequest(requestName)" type="function">
+  Sets the next request to execute in a collection run
+  
+  **Parameters:**
+  - `requestName` (string) - Name of the next request to run
+  
+  ```javascript
+  script:post-response {
+    if (res.getBody().requiresVerification) {
+      bru.setNextRequest('verify-email');
+    } else {
+      bru.setNextRequest('complete-signup');
+    }
+  }
+  ```
+</ParamField>
+
+### Utility Functions
+
+<ParamField path="bru.interpolate(strOrObj)" type="function">
+  Interpolates variables in a string or object
+  
+  ```javascript
+  const url = bru.interpolate('https://{{host}}/api/{{version}}/users');
+  // Returns: "https://api.example.com/api/v1/users"
+  ```
+</ParamField>
+
+<ParamField path="bru.cwd()" type="function">
+  Returns the collection directory path
+  
+  ```javascript
+  const collectionPath = bru.cwd();
+  console.log('Collection location:', collectionPath);
+  ```
+</ParamField>
+
+<ParamField path="bru.getCollectionName()" type="function">
+  Returns the collection name
+  
+  ```javascript
+  const name = bru.getCollectionName();
+  ```
+</ParamField>
+
+<ParamField path="bru.getProcessEnv(key)" type="function">
+  Gets a process environment variable from the OS
+  
+  ```javascript
+  const home = bru.getProcessEnv('HOME');
+  const path = bru.getProcessEnv('PATH');
+  ```
+</ParamField>
+
+<ParamField path="bru.sleep(ms)" type="function">
+  Pauses execution for the specified milliseconds
+  
+  **Parameters:**
+  - `ms` (number) - Milliseconds to sleep
+  
+  Returns a Promise.
+  
+  ```javascript
+  await bru.sleep(1000); // Wait 1 second
+  ```
+</ParamField>
+
+<ParamField path="bru.isSafeMode()" type="function">
+  Returns true if running in safe mode (QuickJS runtime)
+  
+  ```javascript
+  if (bru.isSafeMode()) {
+    console.log('Running in safe mode');
+  } else {
+    console.log('Running in Node VM mode');
+  }
+  ```
+</ParamField>
+
+### Cookie Management
+
+<ParamField path="bru.cookies.jar()" type="function">
+  Creates a cookie jar instance for managing cookies
+  
+  ```javascript
+  const jar = bru.cookies.jar();
+  
+  // Set a cookie
+  jar.setCookie('https://example.com', 'sessionId', 'abc123', (err) => {
+    if (err) console.error(err);
+  });
+  
+  // Get a cookie
+  jar.getCookie('https://example.com', 'sessionId', (err, cookie) => {
+    if (!err) {
+      console.log('Cookie:', cookie.value);
+    }
+  });
+  
+  // Get all cookies for a URL
+  jar.getCookies('https://example.com', (err, cookies) => {
+    if (!err) {
+      console.log('All cookies:', cookies);
+    }
+  });
+  
+  // Check if cookie exists
+  jar.hasCookie('https://example.com', 'sessionId', (err, exists) => {
+    console.log('Cookie exists:', exists);
+  });
+  
+  // Delete a cookie
+  jar.deleteCookie('https://example.com', 'sessionId', (err) => {
+    console.log('Cookie deleted');
+  });
+  
+  // Delete all cookies for a URL
+  jar.deleteCookies('https://example.com', (err) => {
+    console.log('All cookies deleted for domain');
+  });
+  
+  // Clear entire jar
+  jar.clear((err) => {
+    console.log('All cookies cleared');
+  });
+  ```
+</ParamField>
+
+### Utility Methods
+
+<ParamField path="bru.utils.minifyJson(json)" type="function">
+  Minifies JSON (removes whitespace)
+  
+  **Parameters:**
+  - `json` (string | object) - JSON to minify
+  
+  ```javascript
+  const minified = bru.utils.minifyJson({
+    name: 'John',
+    age: 30
+  });
+  // Returns: '{"name":"John","age":30}'
+  ```
+</ParamField>
+
+<ParamField path="bru.utils.minifyXml(xml)" type="function">
+  Minifies XML (removes whitespace)
+  
+  **Parameters:**
+  - `xml` (string) - XML string to minify
+  
+  ```javascript
+  const minified = bru.utils.minifyXml('<root>  <item>value</item>  </root>');
+  ```
+</ParamField>
+
+### Test Results
+
+<ParamField path="bru.getTestResults()" type="async function">
+  Returns all test results with summary
+  
+  ```javascript
+  const results = await bru.getTestResults();
+  console.log(`Passed: ${results.summary.passed}`);
+  console.log(`Failed: ${results.summary.failed}`);
+  ```
+</ParamField>
+
+<ParamField path="bru.getAssertionResults()" type="async function">
+  Returns all assertion results with summary
+  
+  ```javascript
+  const results = await bru.getAssertionResults();
+  console.log('Assertion results:', results);
+  ```
+</ParamField>
+
+## Common Patterns
+
+### Extract and Save Data
+
+```javascript
+script:post-response {
+  const body = res.getBody();
+  
+  // Save authentication token
+  if (body.token) {
+    bru.setEnvVar('auth_token', body.token);
+  }
+  
+  // Save user ID for next request
+  if (body.userId) {
+    bru.setVar('current_user_id', body.userId);
+  }
+  
+  // Save to collection variable
+  if (body.apiVersion) {
+    bru.setCollectionVar('api_version', body.apiVersion);
+  }
+}
+```
+
+### Chain Requests
+
+```javascript
+script:post-response {
+  const status = res.getStatus();
+  const body = res.getBody();
+  
+  if (status === 201 && body.id) {
+    // User created, now verify email
+    bru.setVar('new_user_id', body.id);
+    bru.setNextRequest('send-verification-email');
+  } else if (status === 409) {
+    // User exists, skip to login
+    bru.setNextRequest('login-existing-user');
+  }
+}
+```
+
+### Error Handling
+
+```javascript
+script:post-response {
+  if (res.getStatus() >= 400) {
+    console.error('Request failed:', res.getStatus());
+    console.error('Error:', res.getBody());
+    
+    // Stop collection run on auth errors
+    if (res.getStatus() === 401) {
+      bru.runner.stopExecution();
+    }
+  }
+}
+```
+
+### Response Transformation
+
+```javascript
+script:post-response {
+  const body = res.getBody();
+  
+  // Transform response data
+  if (Array.isArray(body.items)) {
+    body.itemCount = body.items.length;
+    body.processedAt = new Date().toISOString();
+    res.setBody(body);
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Test API" icon="vial" href="/api/scripting/test-api">
+    Write test assertions
+  </Card>
+  <Card title="Pre-request Scripts" icon="arrow-right" href="/api/scripting/pre-request">
+    Modify requests before sending
+  </Card>
+</CardGroup>

@@ -1,0 +1,511 @@
+---
+title: Git Integration
+description: Version control your API collections with Git and collaborate with your team
+---
+
+## Overview
+
+Bruno's file-based approach makes it perfect for version control with Git. Since collections are stored as plain text `.bru` files in folders on your filesystem, you can use Git (or any version control system) to track changes, collaborate with your team, and maintain a history of your API development.
+
+<Info>
+  Bruno stores your collections directly in a folder on your filesystem using a plain text markup language (Bru) to save information about API requests. This design choice makes version control natural and seamless.
+</Info>
+
+## Why Git + Bruno?
+
+<CardGroup cols={2}>
+  <Card title="Plain Text Format" icon="file-lines">
+    `.bru` files are human-readable text files that work perfectly with Git's diff and merge capabilities
+  </Card>
+  
+  <Card title="Offline-First" icon="wifi-slash">
+    No cloud sync means your data stays on your device and in your Git repository
+  </Card>
+  
+  <Card title="Team Collaboration" icon="users">
+    Multiple team members can work on the same collection using Git workflows
+  </Card>
+  
+  <Card title="Change History" icon="clock-rotate-left">
+    Track every change to your API requests with full Git history
+  </Card>
+</CardGroup>
+
+## Setting Up Git for Your Collection
+
+<Steps>
+  <Step title="Initialize Git repository">
+    Navigate to your collection folder and initialize Git:
+    ```bash
+    cd my-api-collection
+    git init
+    ```
+  </Step>
+  
+  <Step title="Create .gitignore">
+    Create a `.gitignore` file to exclude sensitive data:
+    ```bash .gitignore
+    # Environment secrets (keep local)
+    environments/Local.bru
+    environments/*.local.bru
+    
+    # Bruno metadata
+    .bruno/
+    
+    # OS files
+    .DS_Store
+    Thumbs.db
+    
+    # IDE
+    .idea/
+    .vscode/
+    *.swp
+    ```
+  </Step>
+  
+  <Step title="Add collection files">
+    Add your collection files to Git:
+    ```bash
+    git add .
+    git commit -m "Initial commit: Add API collection"
+    ```
+  </Step>
+  
+  <Step title="Push to remote">
+    Push to GitHub, GitLab, or your preferred Git hosting:
+    ```bash
+    git remote add origin https://github.com/username/my-api-collection.git
+    git push -u origin main
+    ```
+  </Step>
+</Steps>
+
+## Collection Structure in Git
+
+Here's what a typical Bruno collection looks like in a Git repository:
+
+```
+my-api-collection/
+├── .git/                      # Git metadata
+├── .gitignore                 # Ignore sensitive files
+├── README.md                  # Collection documentation
+├── bruno.json                 # Collection configuration
+├── collection.bru             # Collection-level settings
+├── environments/              # Environment variables
+│   ├── Production.bru         # Committed (no secrets)
+│   ├── Staging.bru           # Committed (no secrets)
+│   └── Local.bru.example     # Template for local env
+├── auth/                      # Authentication requests
+│   ├── folder.bru
+│   ├── login.bru
+│   └── refresh-token.bru
+└── api/
+    └── v1/
+        ├── users/
+        │   ├── folder.bru
+        │   ├── list-users.bru
+        │   ├── create-user.bru
+        │   └── get-user.bru
+        └── posts/
+            ├── folder.bru
+            └── list-posts.bru
+```
+
+## Managing Secrets with Git
+
+Bruno provides a `vars:secret` block to mark sensitive variables:
+
+```bru Local.bru
+vars {
+  host: http://localhost:8080
+  client_id: my_client_id
+  api_key: sk_test_abc123
+}
+
+vars:secret [
+  client_id,
+  client_secret,
+  api_key,
+  bearer_token
+]
+```
+
+<Warning>
+  Variables marked as secrets should not be committed. Add environment files with secrets to `.gitignore` and commit template files instead.
+</Warning>
+
+### Environment File Strategy
+
+**Option 1: Template Files**
+
+```bash
+# Commit template (no actual secrets)
+environments/Local.bru.example
+environments/Production.bru.example
+
+# Gitignore actual files
+environments/Local.bru
+environments/Production.bru
+```
+
+**Option 2: Separate Secrets**
+
+```bru Production.bru
+vars {
+  # Safe to commit
+  protocol: https
+  host: api.example.com
+  baseUrl: {{protocol}}://{{host}}
+  apiVersion: v1
+}
+```
+
+```bru Production.secrets.bru
+# Add to .gitignore
+vars {
+  api_key: sk_live_actual_secret_key
+  client_secret: actual_client_secret
+}
+
+vars:secret [
+  api_key,
+  client_secret
+]
+```
+
+## Collaborative Workflows
+
+### Feature Branch Workflow
+
+<Steps>
+  <Step title="Create feature branch">
+    ```bash
+    git checkout -b feature/add-user-endpoints
+    ```
+  </Step>
+  
+  <Step title="Add new requests">
+    Create new `.bru` files for your endpoints:
+    ```bash
+    # Add files in Bruno UI or create manually
+    touch api/v1/users/update-user.bru
+    touch api/v1/users/delete-user.bru
+    ```
+  </Step>
+  
+  <Step title="Commit changes">
+    ```bash
+    git add api/v1/users/
+    git commit -m "feat: Add user update and delete endpoints"
+    ```
+  </Step>
+  
+  <Step title="Push and create PR">
+    ```bash
+    git push origin feature/add-user-endpoints
+    # Create Pull Request on GitHub/GitLab
+    ```
+  </Step>
+  
+  <Step title="Review and merge">
+    Team members can review the `.bru` files in the PR, test the requests, and merge when ready.
+  </Step>
+</Steps>
+
+### Reviewing Changes
+
+Git diffs of `.bru` files are human-readable:
+
+```diff
+diff --git a/api/v1/users/create-user.bru b/api/v1/users/create-user.bru
+index 1234567..abcdefg 100644
+--- a/api/v1/users/create-user.bru
++++ b/api/v1/users/create-user.bru
+@@ -8,7 +8,7 @@ post {
+ }
+ 
+ headers {
+-  Content-Type: application/json
++  Content-Type: application/json; charset=utf-8
++  X-API-Version: v1
+ }
+ 
+ body:json {
+```
+
+## Branching Strategies
+
+### GitFlow for API Collections
+
+```
+main (production-ready requests)
+  ↓
+develop (integration branch)
+  ↓
+feature/add-payment-endpoints
+feature/update-auth-flow
+bugfix/fix-user-endpoint
+```
+
+### Environment-Based Branches
+
+Some teams use branches for different environments:
+
+```
+main → Production environment
+staging → Staging environment  
+develop → Development environment
+```
+
+## Merge Conflicts
+
+Because `.bru` files are plain text with clear block structure, conflicts are easy to resolve:
+
+```bru
+meta {
+  name: Get User
+  type: http
+<<<<<<< HEAD
+  seq: 1
+=======
+  seq: 2
+>>>>>>> feature-branch
+}
+```
+
+Resolve by choosing the correct sequence number or merging the changes.
+
+## Git Hooks for Collections
+
+### Pre-commit Hook: Validate .bru Files
+
+Create `.git/hooks/pre-commit`:
+
+```bash
+#!/bin/bash
+
+# Validate all .bru files before commit
+for file in $(git diff --cached --name-only | grep '.bru$'); do
+  echo "Validating $file"
+  # Add validation logic here
+  # You could use bruno-lang parser or custom validation
+done
+
+echo "All .bru files validated!"
+```
+
+### Pre-commit Hook: Check for Secrets
+
+```bash
+#!/bin/bash
+
+# Check for potential secrets in committed files
+if git diff --cached | grep -i 'password\|secret\|api_key' > /dev/null; then
+  echo "⚠️  Warning: Potential secrets detected in commit!"
+  echo "Please review your changes for sensitive data."
+  exit 1
+fi
+```
+
+## README for Your Collection
+
+Create a comprehensive README for your collection repository:
+
+```markdown README.md
+# My API Collection
+
+Bruno collection for the MyApp API.
+
+## Setup
+
+1. Install [Bruno](https://www.usebruno.com/downloads)
+2. Clone this repository
+3. Copy `environments/Local.bru.example` to `environments/Local.bru`
+4. Update Local.bru with your local configuration
+5. Open the collection in Bruno
+
+## Environments
+
+- **Local**: Development on localhost
+- **Staging**: Testing environment
+- **Production**: Live API (requires credentials)
+
+## Folder Structure
+
+- `/auth` - Authentication endpoints
+- `/api/v1/users` - User management
+- `/api/v1/posts` - Post operations
+
+## Contributing
+
+1. Create a feature branch: `git checkout -b feature/my-feature`
+2. Add/update `.bru` files
+3. Commit: `git commit -m "feat: Add new endpoint"`
+4. Push and create PR
+
+## Secrets
+
+Never commit actual API keys or secrets. Use `environments/Local.bru.example` 
+as a template and keep actual credentials in your local `Local.bru` file.
+```
+
+## CI/CD Integration
+
+### Running Collections in CI
+
+Use Bruno CLI to run collections in your CI pipeline:
+
+```yaml .github/workflows/api-tests.yml
+name: API Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Bruno CLI
+        run: npm install -g @usebruno/cli
+      
+      - name: Run API Tests
+        run: |
+          bru run --env Local \
+            --output results.json \
+            --format json
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+      
+      - name: Upload Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: results.json
+```
+
+### GitLab CI Example
+
+```yaml .gitlab-ci.yml
+api-tests:
+  stage: test
+  image: node:18
+  script:
+    - npm install -g @usebruno/cli
+    - bru run --env Staging --reporter json
+  artifacts:
+    reports:
+      junit: bruno-results.xml
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Semantic Commits" icon="message">
+    Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`
+  </Card>
+  
+  <Card title="Atomic Commits" icon="atom">
+    One logical change per commit (e.g., one endpoint or related group)
+  </Card>
+  
+  <Card title="Descriptive Names" icon="signature">
+    Name `.bru` files clearly: `create-user.bru`, `list-posts.bru`
+  </Card>
+  
+  <Card title="Code Review" icon="code-review">
+    Review `.bru` files in PRs just like code
+  </Card>
+</CardGroup>
+
+<CardGroup cols={2}>
+  <Card title="Documentation" icon="book">
+    Keep README.md updated with collection structure and setup
+  </Card>
+  
+  <Card title="Templates" icon="file-code">
+    Commit `.example` files for environment templates
+  </Card>
+  
+  <Card title="Protect Secrets" icon="shield">
+    Use `.gitignore` and `vars:secret` to prevent leaking credentials
+  </Card>
+  
+  <Card title="Organize Folders" icon="folder-tree">
+    Use logical folder structure that mirrors your API
+  </Card>
+</CardGroup>
+
+## Migrating from Other Tools
+
+If you're migrating from Postman or Insomnia:
+
+<Steps>
+  <Step title="Export from current tool">
+    Export your collection as JSON
+  </Step>
+  
+  <Step title="Import to Bruno">
+    Use Bruno's import feature to convert to `.bru` format
+  </Step>
+  
+  <Step title="Initialize Git">
+    Set up Git repository as described above
+  </Step>
+  
+  <Step title="Commit and push">
+    Commit the imported collection and push to your Git hosting
+  </Step>
+</Steps>
+
+## Example: Team Workflow
+
+Here's how a team might use Bruno with Git:
+
+```
+1. Developer creates feature branch
+   git checkout -b feature/payment-endpoints
+
+2. Adds payment endpoints in Bruno
+   - payments/create-payment.bru
+   - payments/refund-payment.bru
+
+3. Updates folder.bru with shared settings
+   - Add auth headers
+   - Add base URL
+
+4. Commits and pushes
+   git add payments/
+   git commit -m "feat: Add payment endpoints"
+   git push origin feature/payment-endpoints
+
+5. Creates Pull Request
+   - Team reviews .bru files
+   - Tests endpoints locally
+   - Approves and merges
+
+6. Merges to main
+   - CI runs collection tests
+   - All team members pull latest
+   - New endpoints available to everyone
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Collections" icon="folder" href="/concepts/collections">
+    Learn more about organizing your collections
+  </Card>
+  
+  <Card title="Environments" icon="globe" href="/concepts/environments">
+    Master environment and variable management
+  </Card>
+  
+  <Card title="CLI" icon="terminal" href="/cli/overview">
+    Run collections from the command line
+  </Card>
+  
+  <Card title="Testing" icon="flask" href="/desktop/tests">
+    Add tests to validate your APIs
+  </Card>
+</CardGroup>

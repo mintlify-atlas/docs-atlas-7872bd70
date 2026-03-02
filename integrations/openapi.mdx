@@ -1,0 +1,665 @@
+---
+title: OpenAPI Import & Export
+description: Import OpenAPI specifications and convert them to Bruno collections
+---
+
+## Overview
+
+Bruno supports importing OpenAPI (formerly Swagger) specifications to quickly generate API collections. Convert your API documentation into testable requests with a single command.
+
+## Importing OpenAPI Specifications
+
+### Basic Import
+
+Import an OpenAPI file to a Bruno collection:
+
+```bash
+bru import openapi --source api.yml --output ~/Desktop/my-collection --collection-name "My API"
+```
+
+### Import Options
+
+The `bru import openapi` command supports various options:
+
+| Option | Alias | Description |
+|--------|-------|-------------|
+| `--source` | `-s` | Path to the source file or URL (required) |
+| `--output` | `-o` | Path to the output directory |
+| `--output-file` | `-f` | Path to the output JSON file |
+| `--collection-name` | `-n` | Name for the imported collection |
+| `--insecure` | - | Skip SSL certificate validation when fetching from URLs |
+
+## Import Methods
+
+<Tabs>
+  <Tab title="From Local File">
+    Import from a local OpenAPI file:
+    
+    <CodeGroup>
+    ```bash YAML
+    bru import openapi \
+      --source api.yml \
+      --output ~/Desktop/my-collection \
+      --collection-name "My API"
+    ```
+    
+    ```bash JSON
+    bru import openapi \
+      --source api.json \
+      --output ~/Desktop/my-collection \
+      --collection-name "My API"
+    ```
+    
+    ```bash Short Form
+    bru import openapi -s api.yml -o ~/Desktop/my-collection -n "My API"
+    ```
+    </CodeGroup>
+  </Tab>
+  
+  <Tab title="From URL">
+    Import directly from a URL:
+    
+    ```bash
+    bru import openapi \
+      --source https://example.com/api-spec.json \
+      --output ~/Desktop \
+      --collection-name "Remote API"
+    ```
+    
+    For URLs with self-signed certificates:
+    
+    ```bash
+    bru import openapi \
+      --source https://localhost:8443/swagger.json \
+      --output ~/Desktop/api \
+      --collection-name "Local API" \
+      --insecure
+    ```
+  </Tab>
+  
+  <Tab title="Export as JSON">
+    Export the collection as a JSON file instead of a directory:
+    
+    ```bash
+    bru import openapi \
+      --source api.yml \
+      --output-file ~/Desktop/my-collection.json \
+      --collection-name "My API"
+    ```
+    
+    This creates a single JSON file containing the entire collection.
+  </Tab>
+</Tabs>
+
+## Programmatic Usage
+
+Use the `@usebruno/converters` package in your code:
+
+### Installation
+
+```bash
+npm install @usebruno/converters
+```
+
+### Convert OpenAPI to Bruno
+
+```javascript
+const { openApiToBruno } = require('@usebruno/converters');
+const fs = require('fs/promises');
+const YAML = require('js-yaml');
+
+async function convertOpenAPISpec() {
+  try {
+    // Read OpenAPI specification
+    const specContent = await fs.readFile('api-spec.yaml', 'utf8');
+    const openApiSpec = YAML.load(specContent);
+    
+    // Convert to Bruno collection
+    const brunoCollection = openApiToBruno(openApiSpec);
+    
+    // Save Bruno collection
+    await fs.writeFile(
+      'bruno-collection.json',
+      JSON.stringify(brunoCollection, null, 2)
+    );
+    
+    console.log('OpenAPI import successful!');
+  } catch (error) {
+    console.error('Error during conversion:', error);
+  }
+}
+
+convertOpenAPISpec();
+```
+
+## What Gets Imported
+
+Bruno's OpenAPI importer extracts the following:
+
+<Steps>
+  <Step title="Endpoints">
+    All API endpoints with their HTTP methods (GET, POST, PUT, DELETE, etc.)
+  </Step>
+
+  <Step title="Parameters">
+    - Path parameters
+    - Query parameters
+    - Header parameters
+    - Request bodies
+  </Step>
+
+  <Step title="Authentication">
+    - API Key authentication
+    - Bearer token authentication
+    - Basic authentication
+    - OAuth2 flows
+  </Step>
+
+  <Step title="Organization">
+    Requests are grouped by:
+    - Tags (if defined in OpenAPI spec)
+    - Paths (automatic grouping by path structure)
+  </Step>
+
+  <Step title="Server URLs">
+    Base URLs from the `servers` section are converted to environment variables
+  </Step>
+</Steps>
+
+## Import Grouping Strategies
+
+Bruno supports different ways to organize imported endpoints:
+
+<CardGroup cols={2}>
+  <Card title="Tag-Based Grouping" icon="tags">
+    Groups endpoints by OpenAPI tags:
+    
+    ```
+    my-collection/
+    ├── Users/
+    │   ├── GET List Users.bru
+    │   └── POST Create User.bru
+    └── Posts/
+        ├── GET List Posts.bru
+        └── POST Create Post.bru
+    ```
+  </Card>
+  
+  <Card title="Path-Based Grouping" icon="folder-tree">
+    Groups endpoints by URL path structure:
+    
+    ```
+    my-collection/
+    ├── api/
+    │   ├── users/
+    │   │   ├── GET users.bru
+    │   │   └── POST users.bru
+    │   └── posts/
+    │       ├── GET posts.bru
+    │       └── POST posts.bru
+    ```
+  </Card>
+</CardGroup>
+
+## Example OpenAPI Import
+
+Given this OpenAPI specification:
+
+```yaml openapi.yaml
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging.example.com/v1
+    description: Staging server
+
+paths:
+  /users:
+    get:
+      summary: List all users
+      tags:
+        - Users
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+    
+    post:
+      summary: Create a new user
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+      responses:
+        '201':
+          description: User created
+
+  /users/{userId}:
+    get:
+      summary: Get user by ID
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User details
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
+```
+
+Running the import:
+
+```bash
+bru import openapi -s openapi.yaml -o ~/Desktop/sample-api -n "Sample API"
+```
+
+Creates this structure:
+
+```
+sample-api/
+├── bruno.json
+├── environments/
+│   ├── Production.bru
+│   └── Staging.bru
+└── Users/
+    ├── GET List all users.bru
+    ├── POST Create a new user.bru
+    └── GET Get user by ID.bru
+```
+
+Generated request file:
+
+```bru Users/GET List all users.bru
+meta {
+  name: List all users
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/users?limit=10
+  body: none
+  auth: inherit
+}
+
+params:query {
+  limit: 10
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+```
+
+## Environment Variables
+
+Imported collections automatically create environment variables:
+
+```bru environments/Production.bru
+vars {
+  baseUrl: https://api.example.com/v1
+  accessToken: your_token_here
+}
+```
+
+```bru environments/Staging.bru
+vars {
+  baseUrl: https://staging.example.com/v1
+  accessToken: your_staging_token
+}
+```
+
+## Authentication Import
+
+Bruno maps OpenAPI security schemes to authentication types:
+
+<Tabs>
+  <Tab title="Bearer Token">
+    OpenAPI:
+    ```yaml
+    securitySchemes:
+      bearerAuth:
+        type: http
+        scheme: bearer
+    ```
+    
+    Bruno:
+    ```bru
+    auth:bearer {
+      token: {{accessToken}}
+    }
+    ```
+  </Tab>
+  
+  <Tab title="API Key">
+    OpenAPI:
+    ```yaml
+    securitySchemes:
+      apiKey:
+        type: apiKey
+        in: header
+        name: X-API-Key
+    ```
+    
+    Bruno:
+    ```bru
+    headers {
+      X-API-Key: {{apiKey}}
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Basic Auth">
+    OpenAPI:
+    ```yaml
+    securitySchemes:
+      basicAuth:
+        type: http
+        scheme: basic
+    ```
+    
+    Bruno:
+    ```bru
+    auth:basic {
+      username: {{username}}
+      password: {{password}}
+    }
+    ```
+  </Tab>
+  
+  <Tab title="OAuth2">
+    OpenAPI:
+    ```yaml
+    securitySchemes:
+      oauth2:
+        type: oauth2
+        flows:
+          authorizationCode:
+            authorizationUrl: https://example.com/oauth/authorize
+            tokenUrl: https://example.com/oauth/token
+    ```
+    
+    Bruno:
+    ```bru
+    auth:oauth2 {
+      grant_type: authorization_code
+      callback_url: http://localhost:3000/callback
+      authorization_url: https://example.com/oauth/authorize
+      access_token_url: https://example.com/oauth/token
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Request Body Mapping
+
+OpenAPI request bodies are converted to Bruno body formats:
+
+<CodeGroup>
+```bru JSON Body
+meta {
+  name: Create User
+  type: http
+}
+
+post {
+  url: {{baseUrl}}/users
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
+}
+```
+
+```bru Form Data
+meta {
+  name: Upload File
+  type: http
+}
+
+post {
+  url: {{baseUrl}}/upload
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  file: @file(/path/to/file.pdf)
+  description: Document upload
+}
+```
+</CodeGroup>
+
+## Supported Formats
+
+Bruno supports importing from multiple API specification formats:
+
+<CardGroup cols={2}>
+  <Card title="OpenAPI 3.0" icon="file-code">
+    Full support for OpenAPI 3.0.x specifications in YAML or JSON format.
+  </Card>
+  
+  <Card title="Postman Collections" icon="file-import">
+    ```bash
+    bru import postman -s collection.json -o output/
+    ```
+  </Card>
+  
+  <Card title="Insomnia" icon="file-import">
+    ```bash
+    bru import insomnia -s insomnia.json -o output/
+    ```
+  </Card>
+  
+  <Card title="WSDL" icon="file-import">
+    ```bash
+    bru import wsdl -s service.wsdl -o output/
+    ```
+  </Card>
+</CardGroup>
+
+## Post-Import Steps
+
+<Steps>
+  <Step title="Review Generated Requests">
+    Open the collection in Bruno and review all imported requests for accuracy.
+  </Step>
+
+  <Step title="Update Environment Variables">
+    Fill in authentication tokens and other environment-specific values:
+    
+    ```bru
+    vars {
+      baseUrl: https://api.example.com
+      accessToken: your_actual_token_here
+      apiKey: your_api_key
+    }
+    ```
+  </Step>
+
+  <Step title="Add Tests">
+    Enhance requests with test assertions:
+    
+    ```bru
+    tests {
+      test("Status is 200", function() {
+        expect(res.status).to.equal(200);
+      });
+      
+      test("Response has users array", function() {
+        expect(res.body.users).to.be.an('array');
+      });
+    }
+    ```
+  </Step>
+
+  <Step title="Customize Request Bodies">
+    Update example values with real test data:
+    
+    ```bru
+    body:json {
+      {
+        "name": "Test User",
+        "email": "test@example.com",
+        "role": "admin"
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Organize Folders">
+    Reorganize requests into a structure that makes sense for your team.
+  </Step>
+</Steps>
+
+## CI/CD Integration
+
+Automate OpenAPI imports in your pipeline:
+
+```yaml .github/workflows/import-openapi.yml
+name: Import OpenAPI Spec
+
+on:
+  push:
+    paths:
+      - 'api-spec/openapi.yaml'
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+      
+      - name: Install Bruno CLI
+        run: npm install -g @usebruno/cli
+      
+      - name: Import OpenAPI Spec
+        run: |
+          bru import openapi \
+            --source api-spec/openapi.yaml \
+            --output bruno-collection \
+            --collection-name "API Tests"
+      
+      - name: Commit Updated Collection
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add bruno-collection/
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update Bruno collection from OpenAPI spec"
+          git push
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep OpenAPI spec as source of truth">
+    Maintain your OpenAPI specification separately and re-import when it changes. This ensures your tests stay synchronized with your API documentation.
+  </Accordion>
+  
+  <Accordion title="Version control your imports">
+    Commit both the OpenAPI spec and the generated Bruno collection to Git:
+    
+    ```
+    project/
+    ├── api-spec/
+    │   └── openapi.yaml
+    └── bruno-tests/
+        ├── bruno.json
+        └── requests/
+    ```
+  </Accordion>
+  
+  <Accordion title="Customize after import">
+    The import creates a foundation. Add:
+    - Test assertions
+    - Pre-request scripts
+    - Post-response scripts
+    - Example data
+    - Documentation notes
+  </Accordion>
+  
+  <Accordion title="Handle circular references">
+    Bruno automatically handles circular references in OpenAPI schemas, converting them to simplified structures.
+  </Accordion>
+  
+  <Accordion title="Use tags for organization">
+    Add meaningful tags to your OpenAPI spec to get better folder organization:
+    
+    ```yaml
+    paths:
+      /users:
+        get:
+          tags:
+            - User Management
+            - Public API
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<Warning>
+  **Error: Failed to parse OpenAPI specification**
+  
+  Ensure your OpenAPI file is valid YAML or JSON. Use a validator like [Swagger Editor](https://editor.swagger.io/) to check for syntax errors.
+</Warning>
+
+<Warning>
+  **Missing authentication in requests**
+  
+  Check that your OpenAPI spec includes a `security` section. Bruno can only import authentication if it's defined in the specification.
+</Warning>
+
+<Tip>
+  **Large specifications**
+  
+  For very large OpenAPI specs (100+ endpoints), consider importing to a JSON file first, then selectively extracting the endpoints you need.
+</Tip>
+
+## Next Steps
+
+After importing your OpenAPI specification:
+
+- [Run your collection in CI/CD](/integrations/ci-cd)
+- [Set up version control with Git](/integrations/version-control)
+- [Learn about Bruno's scripting capabilities](/api/scripting/overview)
+- [Add tests and assertions](/desktop/tests)

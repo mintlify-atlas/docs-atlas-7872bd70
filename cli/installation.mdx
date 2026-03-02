@@ -1,0 +1,251 @@
+---
+title: Installing Bruno CLI
+description: Install the Bruno CLI tool to run your API collections from the command line
+---
+
+# Installing Bruno CLI
+
+The Bruno CLI is distributed as an npm package (`@usebruno/cli`) and can be installed globally or as a project dependency.
+
+## Global Installation
+
+Install Bruno CLI globally to use it across all your projects:
+
+<CodeGroup>
+```bash npm
+npm install -g @usebruno/cli
+```
+
+```bash yarn
+yarn global add @usebruno/cli
+```
+
+```bash pnpm
+pnpm add -g @usebruno/cli
+```
+</CodeGroup>
+
+After installation, verify it's working:
+
+```bash
+bru --version
+```
+
+## Project Installation
+
+Install as a development dependency in your project:
+
+<CodeGroup>
+```bash npm
+npm install --save-dev @usebruno/cli
+```
+
+```bash yarn
+yarn add --dev @usebruno/cli
+```
+
+```bash pnpm
+pnpm add -D @usebruno/cli
+```
+</CodeGroup>
+
+Then add scripts to your `package.json`:
+
+```json package.json
+{
+  "scripts": {
+    "test:api": "bru run",
+    "test:api:local": "bru run --env local",
+    "test:api:production": "bru run --env production --reporter-junit results.xml"
+  }
+}
+```
+
+Run the tests:
+
+```bash
+npm run test:api
+```
+
+## Version Information
+
+Check the installed version:
+
+```bash
+bru --version
+```
+
+Get help and see available commands:
+
+```bash
+bru --help
+```
+
+## System Requirements
+
+<Note>
+**Node.js version:** Bruno CLI requires Node.js 14 or higher.
+</Note>
+
+- **Node.js:** v14.0.0 or higher
+- **npm:** v6.0.0 or higher (or equivalent yarn/pnpm version)
+- **Operating Systems:** Linux, macOS, Windows
+
+## CI/CD Environment Installation
+
+For CI/CD pipelines, install as part of your build process:
+
+<CodeGroup>
+```yaml GitHub Actions
+name: API Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install Bruno CLI
+        run: npm install -g @usebruno/cli
+      - name: Run API Tests
+        run: bru run --reporter-junit results.xml
+        working-directory: ./api-tests
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: ./api-tests/results.xml
+```
+
+```yaml GitLab CI
+api-tests:
+  image: node:18
+  script:
+    - npm install -g @usebruno/cli
+    - cd api-tests
+    - bru run --reporter-junit results.xml
+  artifacts:
+    when: always
+    reports:
+      junit: api-tests/results.xml
+```
+
+```yaml CircleCI
+version: 2.1
+
+jobs:
+  api-test:
+    docker:
+      - image: cimg/node:18.0
+    steps:
+      - checkout
+      - run:
+          name: Install Bruno CLI
+          command: npm install -g @usebruno/cli
+      - run:
+          name: Run API Tests
+          command: bru run --reporter-junit results.xml
+          working_directory: api-tests
+      - store_test_results:
+          path: api-tests/results.xml
+```
+</CodeGroup>
+
+## Docker Installation
+
+Create a Dockerfile for running Bruno CLI tests:
+
+```dockerfile Dockerfile
+FROM node:18-alpine
+
+# Install Bruno CLI
+RUN npm install -g @usebruno/cli
+
+# Copy your collection
+WORKDIR /app
+COPY ./api-collection /app
+
+# Run tests
+CMD ["bru", "run", "--reporter-junit", "results.xml"]
+```
+
+Build and run:
+
+```bash
+docker build -t bruno-tests .
+docker run --rm -v $(pwd)/results:/app/results bruno-tests
+```
+
+## Updating Bruno CLI
+
+Keep your CLI up to date with the latest features:
+
+<CodeGroup>
+```bash npm (global)
+npm update -g @usebruno/cli
+```
+
+```bash npm (project)
+npm update @usebruno/cli
+```
+
+```bash yarn
+yarn upgrade @usebruno/cli
+```
+
+```bash pnpm
+pnpm update @usebruno/cli
+```
+</CodeGroup>
+
+## Troubleshooting
+
+### Command Not Found
+
+If `bru` is not recognized after installation:
+
+1. **Check npm global path:**
+   ```bash
+   npm config get prefix
+   ```
+
+2. **Add to PATH:** Ensure the npm global bin directory is in your PATH:
+   ```bash
+   export PATH="$(npm config get prefix)/bin:$PATH"
+   ```
+
+3. **Use npx:** As an alternative, run without installing globally:
+   ```bash
+   npx @usebruno/cli run
+   ```
+
+### Permission Errors
+
+On Linux/macOS, if you get permission errors during global installation:
+
+```bash
+sudo npm install -g @usebruno/cli
+```
+
+Or configure npm to use a different directory (recommended):
+
+```bash
+mkdir ~/.npm-global
+npm config set prefix '~/.npm-global'
+export PATH=~/.npm-global/bin:$PATH
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Running Tests" icon="play" href="/cli/running-tests">
+    Learn how to run your API tests with the CLI
+  </Card>
+  <Card title="CLI Options" icon="sliders" href="/cli/options">
+    Explore all available command-line options
+  </Card>
+</CardGroup>

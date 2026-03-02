@@ -1,0 +1,180 @@
+---
+title: Scripting API Overview
+description: Complete reference for Bruno's JavaScript scripting API
+---
+
+Bruno provides a powerful JavaScript runtime for scripting and automation. You can write scripts in three contexts: pre-request scripts, post-response scripts, and tests.
+
+## Available Contexts
+
+Bruno scripts run in a sandboxed JavaScript environment with access to:
+
+- **Pre-request scripts** (`script:pre-request`): Run before the request is sent
+- **Post-response scripts** (`script:post-response`): Run after the response is received
+- **Tests** (`tests`): Run after the response to validate results
+
+## Global Objects
+
+All scripts have access to these global objects:
+
+<ParamField path="bru" type="object">
+  The main Bruno API object for managing variables, environment, and request flow
+</ParamField>
+
+<ParamField path="req" type="BrunoRequest">
+  The request object (available in pre-request and post-response scripts)
+</ParamField>
+
+<ParamField path="res" type="BrunoResponse">
+  The response object (available in post-response scripts and tests only)
+</ParamField>
+
+<ParamField path="test" type="function">
+  Function to define test assertions
+</ParamField>
+
+<ParamField path="expect" type="object">
+  Chai's expect assertion library
+</ParamField>
+
+<ParamField path="assert" type="object">
+  Chai's assert assertion library
+</ParamField>
+
+<ParamField path="console" type="object">
+  Console logging object with `log()`, `info()`, `warn()`, `error()`, and `debug()` methods
+</ParamField>
+
+## Built-in Libraries
+
+Bruno includes several built-in libraries that you can access using `require()`:
+
+<CardGroup cols={2}>
+  <Card title="chai" icon="vial">
+    Assertion library (automatically available as `expect` and `assert`)
+  </Card>
+  <Card title="moment" icon="calendar">
+    Date and time manipulation library
+  </Card>
+  <Card title="btoa" icon="lock">
+    Base64 encoding function
+  </Card>
+  <Card title="atob" icon="unlock">
+    Base64 decoding function
+  </Card>
+  <Card title="crypto-js" icon="shield">
+    Cryptographic functions
+  </Card>
+  <Card title="jsonwebtoken" icon="key">
+    JWT creation and verification
+  </Card>
+  <Card title="buffer" icon="binary">
+    Buffer implementation for binary data
+  </Card>
+  <Card title="tv4" icon="check">
+    JSON schema validation
+  </Card>
+</CardGroup>
+
+## Example Usage
+
+<CodeGroup>
+
+```javascript Pre-request Script
+script:pre-request {
+  // Set authentication header
+  const token = bru.getEnvVar('api_token');
+  req.setHeader('Authorization', `Bearer ${token}`);
+  
+  // Modify request body
+  const body = req.getBody();
+  body.timestamp = Date.now();
+  req.setBody(body);
+}
+```
+
+```javascript Post-response Script
+script:post-response {
+  // Extract data from response
+  const data = res.getBody();
+  
+  // Save to environment
+  if (data.sessionId) {
+    bru.setEnvVar('session_id', data.sessionId);
+  }
+  
+  console.log('Response status:', res.getStatus());
+}
+```
+
+```javascript Tests
+tests {
+  test("should return 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("should contain user data", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('userId');
+    expect(body.userId).to.be.a('number');
+  });
+}
+```
+
+</CodeGroup>
+
+## Script Execution Order
+
+When a request is executed, scripts run in this order:
+
+1. **Pre-request script** - Modify request before sending
+2. **HTTP Request** - Send the request
+3. **Post-response script** - Process the response
+4. **Assertions** - Run declarative assertions from `assert` block
+5. **Tests** - Run test scripts
+
+## Runtime Modes
+
+Bruno supports two runtime modes:
+
+<AccordionGroup>
+  <Accordion title="Safe Mode (QuickJS)" icon="shield-check">
+    The default runtime that provides a secure, sandboxed environment. Recommended for most use cases.
+    
+    - Limited file system access
+    - Better security
+    - Faster startup time
+    
+    Check if running in safe mode:
+    ```javascript
+    if (bru.isSafeMode()) {
+      console.log('Running in safe mode');
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Node VM Mode" icon="code">
+    A more permissive runtime with full Node.js capabilities. Enable this in collection settings for advanced scripting needs.
+    
+    - Full file system access
+    - Additional Node.js modules
+    - Custom library imports
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Pre-request API" icon="arrow-right" href="/api/scripting/pre-request">
+    Modify requests before they are sent
+  </Card>
+  <Card title="Post-response API" icon="arrow-left" href="/api/scripting/post-response">
+    Process responses and extract data
+  </Card>
+  <Card title="Test API" icon="vial" href="/api/scripting/test-api">
+    Write assertions and validate responses
+  </Card>
+  <Card title="Advanced Scripting" icon="book" href="/advanced/scripting">
+    Common scripting patterns and examples
+  </Card>
+</CardGroup>

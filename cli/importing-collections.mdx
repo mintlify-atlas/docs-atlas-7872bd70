@@ -1,0 +1,351 @@
+---
+title: Importing Collections
+description: Import API collections from OpenAPI, WSDL, and other formats into Bruno
+---
+
+# Importing Collections
+
+The `bru import` command allows you to convert API specifications from other formats into Bruno collections. This is useful for:
+
+- Migrating from other API tools
+- Generating collections from OpenAPI/Swagger specs
+- Converting SOAP/WSDL services to Bruno format
+- Automating collection creation from API documentation
+
+## Supported Formats
+
+Bruno CLI currently supports importing from:
+
+- **OpenAPI** - OpenAPI 3.x and Swagger 2.x specifications (JSON/YAML)
+- **WSDL** - SOAP Web Service Definition Language
+
+## OpenAPI Import
+
+### Basic Import
+
+Import an OpenAPI specification from a local file:
+
+```bash
+bru import openapi --source api.yml --output ~/Desktop/my-collection --collection-name "My API"
+```
+
+Using short aliases:
+
+```bash
+bru import openapi -s api.yml -o ~/Desktop/my-collection -n "My API"
+```
+
+### Import from URL
+
+Import directly from a remote URL:
+
+```bash
+bru import openapi --source https://api.example.com/openapi.json --output ~/Desktop/remote-api --collection-name "Remote API"
+```
+
+### Skip SSL Verification
+
+For URLs with self-signed certificates:
+
+<Warning>
+Only use `--insecure` in development/testing. Never in production.
+</Warning>
+
+```bash
+bru import openapi --source https://self-signed.example.com/api.json --insecure --output ~/Desktop/api
+```
+
+### Collection Formats
+
+Specify the output format:
+
+```bash
+bru import openapi -s api.yml -o ~/Desktop/collection --collection-format bru
+```
+
+Options:
+- `opencollection` (default) - Uses YAML format (`.yml`)
+- `bru` - Uses Bruno format (`.bru`)
+
+### Grouping Strategies
+
+Control how requests are organized:
+
+```bash
+bru import openapi -s api.yml -o ~/Desktop/collection --group-by path
+```
+
+Grouping options:
+
+<ParamField path="group-by" type="string" default="tags">
+  - `tags` - Group by OpenAPI tags (default)
+  - `path` - Group by URL path structure
+</ParamField>
+
+#### Example: Tags Grouping
+
+```yaml OpenAPI
+paths:
+  /users:
+    get:
+      tags: [Users]
+  /posts:
+    get:
+      tags: [Posts]
+```
+
+Results in:
+```
+my-collection/
+├── Users/
+│   └── Get Users.bru
+└── Posts/
+    └── Get Posts.bru
+```
+
+#### Example: Path Grouping
+
+```yaml OpenAPI
+paths:
+  /api/v1/users:
+    get: ...
+  /api/v1/posts:
+    get: ...
+```
+
+Results in:
+```
+my-collection/
+└── api/
+    └── v1/
+        ├── users/
+        │   └── Get Users.bru
+        └── posts/
+            └── Get Posts.bru
+```
+
+### Export as JSON
+
+Instead of creating a collection directory, export as a JSON file:
+
+```bash
+bru import openapi --source api.yml --output-file ~/Desktop/collection.json --collection-name "My API"
+```
+
+Using aliases:
+
+```bash
+bru import openapi -s api.yml -f ~/Desktop/collection.json -n "My API"
+```
+
+## WSDL Import
+
+### Basic WSDL Import
+
+Import a SOAP service from WSDL:
+
+```bash
+bru import wsdl --source service.wsdl --output ~/Desktop/soap-collection --collection-name "SOAP Service"
+```
+
+### Import WSDL from URL
+
+```bash
+bru import wsdl -s https://example.com/service.wsdl -o ~/Desktop/soap-api -n "Remote SOAP Service"
+```
+
+## Import Options Reference
+
+<ParamField path="--source" type="string" required>
+  Path to the source file or URL. Can be a local file path or HTTP(S) URL.
+  
+  **Aliases:** `-s`
+</ParamField>
+
+<ParamField path="--output" type="string">
+  Path to the output directory where the collection will be created.
+  
+  **Aliases:** `-o`
+  
+  **Conflicts with:** `--output-file`
+</ParamField>
+
+<ParamField path="--output-file" type="string">
+  Path to export the collection as a JSON file instead of a directory.
+  
+  **Aliases:** `-f`
+  
+  **Conflicts with:** `--output`
+</ParamField>
+
+<ParamField path="--collection-name" type="string">
+  Name for the imported collection. If not specified, uses the name from the specification or filename.
+  
+  **Aliases:** `-n`
+</ParamField>
+
+<ParamField path="--collection-format" type="string" default="opencollection">
+  Format of the imported collection.
+  
+  **Options:**
+  - `opencollection` - YAML format
+  - `bru` - Bruno format
+</ParamField>
+
+<ParamField path="--insecure" type="boolean" default={false}>
+  Skip SSL certificate verification when fetching from URLs.
+  
+  <Warning>Use only in development/testing environments.</Warning>
+</ParamField>
+
+<ParamField path="--group-by" type="string" default="tags">
+  How to organize imported requests (OpenAPI only).
+  
+  **Aliases:** `-g`
+  
+  **Options:**
+  - `tags` - Group by OpenAPI tags
+  - `path` - Group by URL path structure
+</ParamField>
+
+## Complete Examples
+
+### Import Public API Spec
+
+```bash
+bru import openapi \
+  --source https://petstore3.swagger.io/api/v3/openapi.json \
+  --output ~/Desktop/petstore \
+  --collection-name "Pet Store API" \
+  --group-by tags
+```
+
+### Import with Custom Format
+
+```bash
+bru import openapi \
+  -s ./specs/internal-api.yml \
+  -o ~/projects/api-tests \
+  -n "Internal API" \
+  --collection-format bru \
+  --group-by path
+```
+
+### Import and Export as JSON
+
+```bash
+bru import openapi \
+  --source https://api.example.com/v2/openapi.yaml \
+  --output-file ./generated/api.json \
+  --collection-name "Example API v2" \
+  --insecure
+```
+
+### Import WSDL Service
+
+```bash
+bru import wsdl \
+  --source https://www.example.com/services/Calculator.wsdl \
+  --output ~/Desktop/calculator-service \
+  --collection-name "Calculator SOAP Service"
+```
+
+## Output Structure
+
+When importing to a directory (`--output`), Bruno creates:
+
+```
+my-collection/
+├── collection.json (or collection.yml for opencollection)
+├── environments/
+│   └── (any imported environments)
+└── (organized request files)
+```
+
+When exporting to JSON (`--output-file`), you get a single JSON file containing the entire collection structure.
+
+## Automating Imports
+
+You can automate collection generation in your CI/CD pipeline:
+
+```yaml .github/workflows/generate-collection.yml
+name: Generate Bruno Collection
+
+on:
+  push:
+    paths:
+      - 'openapi.yml'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install Bruno CLI
+        run: npm install -g @usebruno/cli
+      - name: Generate Collection
+        run: |
+          bru import openapi \
+            --source openapi.yml \
+            --output ./bruno-collection \
+            --collection-name "Generated API"
+      - name: Commit Changes
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add bruno-collection/
+          git commit -m "Update Bruno collection from OpenAPI spec" || exit 0
+          git push
+```
+
+## Post-Import Steps
+
+1. **Review the collection** - Check that all endpoints were imported correctly
+2. **Add environments** - Create environment files for different stages
+3. **Add tests** - Enhance requests with assertions and tests
+4. **Configure auth** - Set up authentication for your endpoints
+5. **Run tests** - Verify the collection works:
+   ```bash
+   cd ~/Desktop/my-collection
+   bru run
+   ```
+
+## Troubleshooting
+
+### Invalid OpenAPI Spec
+
+If import fails, validate your spec:
+
+```bash
+# Using swagger-cli
+npx @apidevtools/swagger-cli validate openapi.yml
+```
+
+### URL Fetch Errors
+
+For SSL errors with trusted sources:
+
+```bash
+bru import openapi --source https://example.com/api.json --insecure --output ./collection
+```
+
+### Empty Collection
+
+If the imported collection is empty:
+- Verify the spec file is valid
+- Check that paths are defined in the OpenAPI spec
+- For WSDL, ensure the service definitions are present
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Running Tests" icon="play" href="/cli/running-tests">
+    Learn how to run your imported collection
+  </Card>
+  <Card title="CLI Options" icon="sliders" href="/cli/options">
+    Explore all CLI options and flags
+  </Card>
+</CardGroup>

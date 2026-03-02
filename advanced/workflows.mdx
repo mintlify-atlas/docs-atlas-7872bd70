@@ -1,0 +1,645 @@
+---
+title: Complex Workflows
+description: Build advanced multi-request workflows and automation in Bruno
+---
+
+Bruno enables you to build sophisticated API workflows by chaining requests, controlling execution flow, and automating complex testing scenarios. Master these techniques to handle real-world API testing needs.
+
+## Workflow Control
+
+Bruno provides several methods to control request execution flow:
+
+<CardGroup cols={3}>
+  <Card title="Skip Request" icon="forward">
+    Skip the current request
+  </Card>
+  <Card title="Stop Execution" icon="stop">
+    Halt the entire workflow
+  </Card>
+  <Card title="Set Next Request" icon="arrow-right">
+    Control request order
+  </Card>
+</CardGroup>
+
+## Chaining Requests
+
+Pass data between requests to create dependent workflows.
+
+### Basic Request Chaining
+
+<Steps>
+  <Step title="Step 1: Create User">
+    ```javascript
+    // POST /api/users
+    // Pre-request script
+    const { v4: uuidv4 } = require('uuid');
+    const uniqueEmail = `user_${uuidv4()}@example.com`;
+    
+    bru.setVar('userEmail', uniqueEmail);
+    
+    const body = req.getBody();
+    body.email = uniqueEmail;
+    req.setBody(body);
+    ```
+    
+    ```javascript
+    // Post-response script
+    const response = res.getBody();
+    bru.setVar('userId', response.user.id);
+    bru.setVar('authToken', response.token);
+    
+    console.log('Created user:', response.user.id);
+    ```
+  </Step>
+  
+  <Step title="Step 2: Get User Profile">
+    ```javascript
+    // GET /api/users/{{userId}}
+    // Pre-request script
+    const token = bru.getVar('authToken');
+    req.setHeader('Authorization', `Bearer ${token}`);
+    ```
+    
+    ```javascript
+    // Tests
+    test("should retrieve created user", function() {
+      const data = res.getBody();
+      expect(data.email).to.equal(bru.getVar('userEmail'));
+      expect(data.id).to.equal(bru.getVar('userId'));
+    });
+    ```
+  </Step>
+  
+  <Step title="Step 3: Update User">
+    ```javascript
+    // PATCH /api/users/{{userId}}
+    // Pre-request script
+    const token = bru.getVar('authToken');
+    req.setHeader('Authorization', `Bearer ${token}`);
+    
+    const body = req.getBody();
+    body.name = 'Updated Name';
+    body.bio = 'Updated bio text';
+    req.setBody(body);
+    ```
+  </Step>
+  
+  <Step title="Step 4: Delete User">
+    ```javascript
+    // DELETE /api/users/{{userId}}
+    // Pre-request script
+    const token = bru.getVar('authToken');
+    req.setHeader('Authorization', `Bearer ${token}`);
+    ```
+    
+    ```javascript
+    // Tests
+    test("should successfully delete user", function() {
+      expect(res.getStatus()).to.equal(204);
+    });
+    
+    // Clean up variables
+    bru.deleteVar('userId');
+    bru.deleteVar('authToken');
+    bru.deleteVar('userEmail');
+    ```
+  </Step>
+</Steps>
+
+## Making Additional Requests
+
+Use `bru.sendRequest()` to make additional HTTP requests within your scripts.
+
+### Send Request API
+
+<Tabs>
+  <Tab title="Async/Await">
+    ```javascript
+    await test("fetch and validate additional data", async () => {
+      const response = await bru.sendRequest({
+        url: 'https://api.example.com/users/123',
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${bru.getVar('token')}`
+        }
+      });
+      
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('id', 123);
+      
+      // Store data for subsequent requests
+      bru.setVar('userName', response.data.name);
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Promise Chain">
+    ```javascript
+    await test("create and verify resource", async () => {
+      await bru.sendRequest({
+        url: 'https://api.example.com/resources',
+        method: 'POST',
+        data: { name: 'New Resource' }
+      })
+      .then(createRes => {
+        expect(createRes.status).to.equal(201);
+        bru.setVar('resourceId', createRes.data.id);
+        
+        // Chain another request
+        return bru.sendRequest({
+          url: `https://api.example.com/resources/${createRes.data.id}`,
+          method: 'GET'
+        });
+      })
+      .then(getRes => {
+        expect(getRes.data.name).to.equal('New Resource');
+      });
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Callback">
+    ```javascript
+    await test("request with callback", async () => {
+      await bru.sendRequest({
+        url: 'https://api.example.com/ping',
+        method: 'GET'
+      }, function(error, response) {
+        if (error) {
+          console.error('Request failed:', error.message);
+          expect(error).to.be.null;
+        } else {
+          expect(response.status).to.equal(200);
+          expect(response.data).to.equal('pong');
+        }
+      });
+    });
+    ```
+  </Tab>
+</Tabs>
+
+### Request Configuration Options
+
+```javascript
+const response = await bru.sendRequest({
+  url: 'https://api.example.com/data',
+  method: 'POST',           // GET, POST, PUT, PATCH, DELETE, etc.
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer token',
+    'X-Custom-Header': 'value'
+  },
+  data: {                   // Request body (for POST, PUT, PATCH)
+    key: 'value',
+    nested: {
+      data: 'here'
+    }
+  },
+  params: {                 // Query parameters
+    page: 1,
+    limit: 10
+  },
+  timeout: 5000,           // Request timeout in milliseconds
+  maxRedirects: 5          // Maximum number of redirects to follow
+});
+```
+
+## Conditional Execution
+
+Control which requests run based on runtime conditions.
+
+### Skip Request
+
+```javascript
+// Skip request based on condition
+const skipThisRequest = bru.getVar('skipValidation');
+if (skipThisRequest) {
+  bru.runner.skipRequest();
+}
+
+// Skip if environment is production
+if (bru.getEnvName() === 'production') {
+  bru.runner.skipRequest();
+}
+
+// Skip if previous request failed
+const previousRequestFailed = bru.getVar('authFailed');
+if (previousRequestFailed) {
+  console.log('Skipping request due to auth failure');
+  bru.runner.skipRequest();
+}
+```
+
+### Stop Execution
+
+```javascript
+// Stop entire workflow on critical failure
+if (res.getStatus() === 401) {
+  console.error('Authentication failed - stopping execution');
+  bru.setVar('authFailed', true);
+  bru.runner.stopExecution();
+}
+
+// Stop if required data is missing
+const userId = res.getBody().userId;
+if (!userId) {
+  console.error('User ID not found in response');
+  bru.runner.stopExecution();
+}
+
+// Stop on critical error
+const data = res.getBody();
+if (data.error && data.error.severity === 'critical') {
+  console.error('Critical error occurred:', data.error.message);
+  bru.runner.stopExecution();
+}
+```
+
+### Set Next Request
+
+```javascript
+// Dynamic routing based on response
+const status = res.getBody().status;
+
+if (status === 'pending') {
+  bru.setNextRequest('Check Status');
+} else if (status === 'completed') {
+  bru.setNextRequest('Get Results');
+} else if (status === 'failed') {
+  bru.setNextRequest('Handle Error');
+}
+
+// Branch based on environment
+const env = bru.getEnvName();
+if (env === 'production') {
+  bru.setNextRequest('Production Only Test');
+} else {
+  bru.setNextRequest('Dev Only Test');
+}
+```
+
+## Advanced Workflow Patterns
+
+### Authentication Flow
+
+<CodeGroup>
+```javascript Login Request
+// POST /auth/login
+// Post-response script
+const response = res.getBody();
+
+if (res.getStatus() === 200) {
+  bru.setEnvVar('accessToken', response.access_token);
+  bru.setEnvVar('refreshToken', response.refresh_token, { persist: true });
+  bru.setVar('tokenExpiry', Date.now() + (response.expires_in * 1000));
+  
+  console.log('Login successful');
+} else {
+  console.error('Login failed:', response.error);
+  bru.runner.stopExecution();
+}
+```
+
+```javascript Authenticated Request
+// GET /api/protected-resource
+// Pre-request script
+const accessToken = bru.getEnvVar('accessToken');
+const tokenExpiry = bru.getVar('tokenExpiry');
+
+// Check if token is expired
+if (Date.now() >= tokenExpiry) {
+  console.log('Token expired, refreshing...');
+  
+  const refreshToken = bru.getEnvVar('refreshToken');
+  const refreshResponse = await bru.sendRequest({
+    url: 'https://api.example.com/auth/refresh',
+    method: 'POST',
+    data: { refresh_token: refreshToken }
+  });
+  
+  bru.setEnvVar('accessToken', refreshResponse.data.access_token);
+  bru.setVar('tokenExpiry', Date.now() + (refreshResponse.data.expires_in * 1000));
+  
+  req.setHeader('Authorization', `Bearer ${refreshResponse.data.access_token}`);
+} else {
+  req.setHeader('Authorization', `Bearer ${accessToken}`);
+}
+```
+</CodeGroup>
+
+### Polling Pattern
+
+```javascript
+// Wait for async operation to complete
+await test("poll for job completion", async () => {
+  const jobId = res.getBody().jobId;
+  const maxAttempts = 10;
+  const pollInterval = 2000; // 2 seconds
+  
+  let attempt = 0;
+  let jobStatus = 'pending';
+  
+  while (attempt < maxAttempts && jobStatus === 'pending') {
+    await bru.sleep(pollInterval);
+    
+    const statusResponse = await bru.sendRequest({
+      url: `https://api.example.com/jobs/${jobId}`,
+      method: 'GET'
+    });
+    
+    jobStatus = statusResponse.data.status;
+    console.log(`Attempt ${attempt + 1}: Job status is ${jobStatus}`);
+    
+    attempt++;
+  }
+  
+  expect(jobStatus).to.equal('completed');
+  expect(attempt).to.be.below(maxAttempts);
+});
+```
+
+### Batch Operations
+
+```javascript
+// Create multiple resources in sequence
+await test("create batch of users", async () => {
+  const userEmails = [
+    'user1@example.com',
+    'user2@example.com',
+    'user3@example.com'
+  ];
+  
+  const createdUserIds = [];
+  
+  for (const email of userEmails) {
+    const response = await bru.sendRequest({
+      url: 'https://api.example.com/users',
+      method: 'POST',
+      data: {
+        email: email,
+        name: email.split('@')[0]
+      }
+    });
+    
+    expect(response.status).to.equal(201);
+    createdUserIds.push(response.data.id);
+  }
+  
+  bru.setVar('batchUserIds', createdUserIds);
+  console.log('Created users:', createdUserIds);
+});
+
+// Clean up in subsequent request
+await test("cleanup batch users", async () => {
+  const userIds = bru.getVar('batchUserIds');
+  
+  for (const userId of userIds) {
+    await bru.sendRequest({
+      url: `https://api.example.com/users/${userId}`,
+      method: 'DELETE'
+    });
+  }
+  
+  console.log('Cleaned up users:', userIds);
+  bru.deleteVar('batchUserIds');
+});
+```
+
+### Pagination Workflow
+
+```javascript
+// Fetch all pages of results
+await test("fetch all paginated results", async () => {
+  let allItems = [];
+  let currentPage = 1;
+  let hasMore = true;
+  
+  while (hasMore) {
+    const response = await bru.sendRequest({
+      url: 'https://api.example.com/items',
+      method: 'GET',
+      params: {
+        page: currentPage,
+        limit: 100
+      }
+    });
+    
+    const data = response.data;
+    allItems = allItems.concat(data.items);
+    
+    hasMore = data.pagination.has_more;
+    currentPage++;
+    
+    console.log(`Fetched page ${currentPage - 1}, total items: ${allItems.length}`);
+    
+    // Safety limit
+    if (currentPage > 50) {
+      console.warn('Reached maximum page limit');
+      break;
+    }
+  }
+  
+  bru.setVar('allItems', allItems);
+  expect(allItems.length).to.be.above(0);
+});
+```
+
+### Parallel Requests
+
+```javascript
+// Execute multiple requests in parallel
+await test("fetch data from multiple endpoints", async () => {
+  const requests = [
+    bru.sendRequest({ url: 'https://api.example.com/users', method: 'GET' }),
+    bru.sendRequest({ url: 'https://api.example.com/posts', method: 'GET' }),
+    bru.sendRequest({ url: 'https://api.example.com/comments', method: 'GET' })
+  ];
+  
+  const [usersRes, postsRes, commentsRes] = await Promise.all(requests);
+  
+  expect(usersRes.status).to.equal(200);
+  expect(postsRes.status).to.equal(200);
+  expect(commentsRes.status).to.equal(200);
+  
+  bru.setVar('userData', usersRes.data);
+  bru.setVar('postsData', postsRes.data);
+  bru.setVar('commentsData', commentsRes.data);
+});
+```
+
+## Error Handling in Workflows
+
+```javascript
+// Graceful error handling
+await test("handle errors gracefully", async () => {
+  try {
+    const response = await bru.sendRequest({
+      url: 'https://api.example.com/risky-operation',
+      method: 'POST',
+      data: { action: 'process' }
+    });
+    
+    bru.setVar('operationSuccess', true);
+    bru.setVar('result', response.data);
+  } catch (error) {
+    console.error('Operation failed:', error.message);
+    
+    bru.setVar('operationSuccess', false);
+    bru.setVar('errorMessage', error.message);
+    
+    // Don't fail the test, just log the error
+    if (error.status === 404) {
+      console.log('Resource not found - expected in some scenarios');
+    } else if (error.status >= 500) {
+      console.error('Server error occurred');
+    }
+  }
+});
+
+// Retry logic
+await test("retry on failure", async () => {
+  const maxRetries = 3;
+  let attempt = 0;
+  let success = false;
+  let lastError;
+  
+  while (attempt < maxRetries && !success) {
+    try {
+      const response = await bru.sendRequest({
+        url: 'https://api.example.com/flaky-endpoint',
+        method: 'GET'
+      });
+      
+      success = true;
+      bru.setVar('data', response.data);
+    } catch (error) {
+      lastError = error;
+      attempt++;
+      console.log(`Attempt ${attempt} failed, retrying...`);
+      await bru.sleep(1000 * attempt); // Exponential backoff
+    }
+  }
+  
+  if (!success) {
+    throw new Error(`Failed after ${maxRetries} attempts: ${lastError.message}`);
+  }
+});
+```
+
+## Collection and Folder Scripts
+
+Define scripts at collection or folder level to run before/after all requests.
+
+### Collection Level Scripts
+
+```javascript
+// In collection.bru
+script:pre-request {
+  // Runs before every request in the collection
+  const shouldTestCollectionScripts = bru.getVar('should-test-collection-scripts');
+  if(shouldTestCollectionScripts) {
+   bru.setVar('collection-var-set-by-collection-script', 'collection-var-value-set-by-collection-script');
+  }
+}
+
+tests {
+  // Runs after every request in the collection
+  const shouldTestCollectionScripts = bru.getVar('should-test-collection-scripts');
+  const collectionVar = bru.getVar("collection-var-set-by-collection-script");
+  if (shouldTestCollectionScripts && collectionVar) {
+    test("collection level test - should get the var that was set by the collection script", function() {
+      expect(collectionVar).to.equal("collection-var-value-set-by-collection-script");
+    }); 
+    bru.setVar('collection-var-set-by-collection-script', null); 
+    bru.setVar('should-test-collection-scripts', null);
+  }
+}
+```
+
+## Helper Utilities
+
+```javascript
+// Sleep/delay function
+await bru.sleep(2000); // Wait 2 seconds
+
+// Get collection path
+const collectionPath = bru.cwd();
+console.log('Collection directory:', collectionPath);
+
+// Get environment name
+const envName = bru.getEnvName();
+console.log('Current environment:', envName);
+
+// Get collection name
+const collectionName = bru.getCollectionName();
+console.log('Collection:', collectionName);
+
+// Check safe mode
+if (bru.isSafeMode()) {
+  console.log('Running in safe mode (QuickJS sandbox)');
+} else {
+  console.log('Running in developer mode (Node.js VM)');
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep Workflows Modular">
+    Break complex workflows into smaller, reusable requests. Each request should have a clear, single responsibility.
+  </Accordion>
+
+  <Accordion title="Use Descriptive Variable Names">
+    ```javascript
+    // Good
+    bru.setVar('createdUserId', userId);
+    bru.setVar('authTokenExpiry', expiry);
+    
+    // Bad
+    bru.setVar('id', userId);
+    bru.setVar('exp', expiry);
+    ```
+  </Accordion>
+
+  <Accordion title="Clean Up Resources">
+    ```javascript
+    // After workflow completes
+    bru.deleteVar('tempData');
+    bru.deleteVar('sessionId');
+    bru.deleteVar('createdResourceIds');
+    ```
+  </Accordion>
+
+  <Accordion title="Handle Errors Gracefully">
+    Always include error handling for network requests and validate responses before using data.
+  </Accordion>
+
+  <Accordion title="Log Workflow Progress">
+    ```javascript
+    console.log('Step 1: Creating user...');
+    // request
+    console.log('Step 1 complete: User ID', userId);
+    
+    console.log('Step 2: Updating profile...');
+    // request
+    console.log('Step 2 complete');
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Scripting" icon="code" href="/advanced/scripting">
+    Master JavaScript scripting in Bruno
+  </Card>
+  <Card title="Variables" icon="brackets-curly" href="/advanced/variables">
+    Understand variable scopes and usage
+  </Card>
+  <Card title="Assertions" icon="check" href="/advanced/assertions">
+    Validate responses with assertions
+  </Card>
+  <Card title="CLI" icon="terminal" href="/cli/overview">
+    Automate workflows with Bruno CLI
+  </Card>
+</CardGroup>

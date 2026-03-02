@@ -1,0 +1,318 @@
+---
+title: Installation
+description: Install Bruno on Mac, Windows, or Linux using binary downloads or package managers.
+---
+
+## Installation Methods
+
+Bruno is available as a binary download and through various package managers for Mac, Windows, and Linux. Choose the installation method that works best for your platform.
+
+<Tabs>
+  <Tab title="Mac">
+    ### Binary Download
+    
+    Download the latest version from [usebruno.com/downloads](https://www.usebruno.com/downloads).
+    
+    ### Homebrew
+    
+    The recommended way to install Bruno on Mac:
+    
+    ```bash
+    brew install bruno
+    ```
+    
+    <Tip>
+    Homebrew will automatically keep Bruno updated when you run `brew upgrade`.
+    </Tip>
+  </Tab>
+  
+  <Tab title="Windows">
+    ### Binary Download
+    
+    Download the latest installer from [usebruno.com/downloads](https://www.usebruno.com/downloads).
+    
+    ### Chocolatey
+    
+    ```bash
+    choco install bruno
+    ```
+    
+    ### Scoop
+    
+    ```bash
+    scoop bucket add extras
+    scoop install bruno
+    ```
+    
+    ### winget
+    
+    ```bash
+    winget install Bruno.Bruno
+    ```
+  </Tab>
+  
+  <Tab title="Linux">
+    ### Binary Download
+    
+    Download the latest version from [usebruno.com/downloads](https://www.usebruno.com/downloads).
+    
+    ### Snap
+    
+    ```bash
+    snap install bruno
+    ```
+    
+    ### Flatpak
+    
+    ```bash
+    flatpak install com.usebruno.Bruno
+    ```
+    
+    ### Arch Linux (AUR)
+    
+    ```bash
+    yay -S bruno
+    ```
+    
+    ### Apt (Debian/Ubuntu)
+    
+    <Steps>
+      <Step title="Create keyrings directory">
+        ```bash
+        sudo mkdir -p /etc/apt/keyrings
+        ```
+      </Step>
+      
+      <Step title="Install dependencies">
+        ```bash
+        sudo apt update && sudo apt install gpg curl
+        ```
+      </Step>
+      
+      <Step title="Add Bruno GPG key">
+        ```bash
+        curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x9FA6017ECABE0266" \
+          | gpg --dearmor \
+          | sudo tee /etc/apt/keyrings/bruno.gpg > /dev/null
+        ```
+      </Step>
+      
+      <Step title="Set key permissions">
+        ```bash
+        sudo chmod 644 /etc/apt/keyrings/bruno.gpg
+        ```
+      </Step>
+      
+      <Step title="Add Bruno repository">
+        ```bash
+        echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/bruno.gpg] http://debian.usebruno.com/ bruno stable" \
+          | sudo tee /etc/apt/sources.list.d/bruno.list
+        ```
+      </Step>
+      
+      <Step title="Install Bruno">
+        ```bash
+        sudo apt update && sudo apt install bruno
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Installing Bruno CLI
+
+The Bruno CLI allows you to run your API collections from the command line, making it easy to integrate with CI/CD workflows.
+
+### Using npm
+
+```bash
+npm install -g @usebruno/cli
+```
+
+### Using yarn
+
+```bash
+yarn global add @usebruno/cli
+```
+
+### Using pnpm
+
+```bash
+pnpm add -g @usebruno/cli
+```
+
+### Verify Installation
+
+Check that the CLI is installed correctly:
+
+```bash
+bru --version
+```
+
+<Info>
+The CLI requires Node.js v22.x or the latest LTS version to be installed on your system.
+</Info>
+
+## System Requirements
+
+<AccordionGroup>
+  <Accordion title="Mac">
+    - macOS 10.13 or later
+    - 64-bit processor
+    - At least 200MB of free disk space
+  </Accordion>
+  
+  <Accordion title="Windows">
+    - Windows 10 or later
+    - 64-bit processor
+    - At least 200MB of free disk space
+  </Accordion>
+  
+  <Accordion title="Linux">
+    - 64-bit distribution
+    - At least 200MB of free disk space
+    - For Snap: snapd installed
+    - For Flatpak: flatpak runtime installed
+  </Accordion>
+</AccordionGroup>
+
+## Verifying Your Installation
+
+After installation, launch Bruno from your applications menu or by running:
+
+```bash
+bruno
+```
+
+You should see the Bruno application window open.
+
+<Check>
+Congratulations! Bruno is now installed on your system.
+</Check>
+
+## Updating Bruno
+
+The update process depends on how you installed Bruno:
+
+<Tabs>
+  <Tab title="Package Managers">
+    Package managers will handle updates automatically or through their standard update commands:
+    
+    ```bash
+    # Homebrew (Mac)
+    brew upgrade bruno
+    
+    # Chocolatey (Windows)
+    choco upgrade bruno
+    
+    # Scoop (Windows)
+    scoop update bruno
+    
+    # Snap (Linux)
+    snap refresh bruno
+    
+    # Flatpak (Linux)
+    flatpak update com.usebruno.Bruno
+    
+    # Apt (Debian/Ubuntu)
+    sudo apt update && sudo apt upgrade bruno
+    ```
+  </Tab>
+  
+  <Tab title="Binary Download">
+    If you installed Bruno from the binary download:
+    
+    1. Download the latest version from [usebruno.com/downloads](https://www.usebruno.com/downloads)
+    2. Install the new version (it will replace the old one)
+    3. Your collections and settings will be preserved
+  </Tab>
+</Tabs>
+
+## Uninstalling Bruno
+
+<Tabs>
+  <Tab title="Mac">
+    ```bash
+    # Homebrew
+    brew uninstall bruno
+    
+    # Manual installation
+    # Drag Bruno.app to Trash
+    ```
+  </Tab>
+  
+  <Tab title="Windows">
+    ```bash
+    # Chocolatey
+    choco uninstall bruno
+    
+    # Scoop
+    scoop uninstall bruno
+    
+    # winget
+    winget uninstall Bruno.Bruno
+    
+    # Manual installation
+    # Use Windows "Add or Remove Programs"
+    ```
+  </Tab>
+  
+  <Tab title="Linux">
+    ```bash
+    # Snap
+    snap remove bruno
+    
+    # Flatpak
+    flatpak uninstall com.usebruno.Bruno
+    
+    # Apt
+    sudo apt remove bruno
+    
+    # AUR
+    yay -R bruno
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+Uninstalling Bruno will not delete your API collections, as they are stored in your chosen directory on your filesystem.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Bruno won't launch on Mac">
+    If you see a security warning about Bruno being from an unidentified developer:
+    
+    1. Open System Preferences > Security & Privacy
+    2. Click "Open Anyway" next to the Bruno warning
+    3. Confirm you want to open the app
+  </Accordion>
+  
+  <Accordion title="Installation fails on Linux">
+    Make sure you have the required dependencies installed:
+    
+    ```bash
+    sudo apt-get install libgtk-3-0 libnotify4 libnss3 libxss1 libxtst6 xdg-utils libatspi2.0-0 libappindicator3-1 libsecret-1-0
+    ```
+  </Accordion>
+  
+  <Accordion title="CLI command not found">
+    If `bru` command is not found after installation:
+    
+    1. Make sure npm global bin directory is in your PATH
+    2. Find the path with: `npm config get prefix`
+    3. Add `<prefix>/bin` to your PATH environment variable
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+    Make your first API request with Bruno.
+  </Card>
+  <Card title="CLI Documentation" icon="terminal" href="https://docs.usebruno.com/bru-cli/overview">
+    Learn how to use the Bruno CLI.
+  </Card>
+</CardGroup>

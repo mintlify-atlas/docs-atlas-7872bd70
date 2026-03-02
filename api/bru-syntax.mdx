@@ -1,0 +1,709 @@
+---
+title: Bru Language Syntax
+description: Complete syntax reference for Bruno's .bru file format
+---
+
+## Overview
+
+The Bru language is Bruno's domain-specific language for defining HTTP requests, collections, and environments. Files use the `.bru` extension and follow a block-based syntax that is both human-readable and machine-parsable.
+
+## File Types
+
+There are three types of `.bru` files:
+
+1. **Request files** - Define HTTP/GraphQL/gRPC requests
+2. **Collection files** - Configure collection-level settings (`collection.bru`)
+3. **Environment files** - Define environment variables (`env.bru` or named environments)
+
+## Basic Syntax
+
+### Block Structure
+
+Bru files consist of blocks that define different aspects of a request or collection:
+
+```bru
+meta {
+  name: My Request
+  type: http
+  seq: 1
+}
+
+get {
+  url: https://api.example.com/users
+  body: none
+  auth: none
+}
+```
+
+### Block Types
+
+There are three types of blocks:
+
+<AccordionGroup>
+  <Accordion title="Dictionary Blocks" icon="brackets-curly">
+    Key-value pairs enclosed in curly braces:
+    
+    ```bru
+    headers {
+      content-type: application/json
+      authorization: Bearer {{token}}
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Text Blocks" icon="align-left">
+    Free-form text content for bodies and scripts:
+    
+    ```bru
+    body:json {
+      {
+        "username": "john",
+        "email": "john@example.com"
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="List Blocks" icon="list">
+    Array of items in square brackets:
+    
+    ```bru
+    meta {
+      tags: [
+        regression
+        smoke-test
+      ]
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Dictionary Syntax
+
+### Basic Key-Value Pairs
+
+```bru
+headers {
+  content-type: application/json
+  accept: application/json
+}
+```
+
+### Quoted Keys
+
+Use quotes for keys with special characters:
+
+```bru
+headers {
+  "key with spaces": value
+  "colon:header": value
+  "{braces}": value
+  "nested escaped \"quote\"": value
+}
+```
+
+### Disabled Items
+
+Prefix with `~` to disable a key-value pair:
+
+```bru
+headers {
+  content-type: application/json
+  ~authorization: Bearer {{token}}
+  ~"disabled:header": value
+}
+```
+
+### Multiline Values
+
+Use triple quotes for multiline values:
+
+```bru
+headers {
+  x-long-header: '''
+    This is a
+    multiline value
+  '''
+}
+```
+
+### Content Type Annotations
+
+For multipart forms and file uploads:
+
+```bru
+body:multipart-form {
+  textField: '''
+    Line 1
+    Line 2
+  ''' @contentType(text/plain)
+}
+```
+
+## HTTP Methods
+
+Supported HTTP method blocks:
+
+```bru
+get {
+  url: https://api.example.com/users
+  body: none
+  auth: none
+}
+
+post {
+  url: https://api.example.com/users
+  body: json
+  auth: bearer
+}
+
+put {
+  url: https://api.example.com/users/123
+  body: json
+  auth: bearer
+}
+
+delete {
+  url: https://api.example.com/users/123
+  body: none
+  auth: bearer
+}
+
+patch {
+  url: https://api.example.com/users/123
+  body: json
+  auth: bearer
+}
+```
+
+Other supported methods: `options`, `head`, `connect`, `trace`
+
+### Custom HTTP Methods
+
+```bru
+http {
+  method: CUSTOM
+  url: https://api.example.com/custom
+  body: none
+  auth: none
+}
+```
+
+## Request Metadata
+
+```bru
+meta {
+  name: Request Name
+  type: http
+  seq: 1
+  tags: [
+    regression
+    smoke-test
+  ]
+}
+```
+
+<ParamField path="name" type="string" required>
+  Display name of the request
+</ParamField>
+
+<ParamField path="type" type="string" required>
+  Request type: `http`, `graphql`, `grpc`, or `ws`
+</ParamField>
+
+<ParamField path="seq" type="number">
+  Sequence number for ordering requests
+</ParamField>
+
+<ParamField path="tags" type="array">
+  List of tags for organizing requests
+</ParamField>
+
+## Query Parameters
+
+```bru
+params:query {
+  page: 1
+  limit: 10
+  ~filter: inactive
+}
+```
+
+## Path Parameters
+
+```bru
+params:path {
+  id: 123
+  userId: abc456
+}
+```
+
+## Headers
+
+```bru
+headers {
+  content-type: application/json
+  authorization: Bearer {{token}}
+  x-api-key: {{apiKey}}
+  ~x-debug: true
+}
+```
+
+## Request Bodies
+
+### JSON Body
+
+```bru
+body:json {
+  {
+    "username": "john",
+    "email": "john@example.com",
+    "profile": {
+      "age": 30
+    }
+  }
+}
+```
+
+### Text Body
+
+```bru
+body:text {
+  Plain text content
+  can span multiple lines
+}
+```
+
+### XML Body
+
+```bru
+body:xml {
+  <user>
+    <name>John</name>
+    <email>john@example.com</email>
+  </user>
+}
+```
+
+### GraphQL Query
+
+```bru
+body:graphql {
+  query GetUser($id: ID!) {
+    user(id: $id) {
+      name
+      email
+    }
+  }
+}
+```
+
+### GraphQL Variables
+
+```bru
+body:graphql:vars {
+  {
+    "id": "123"
+  }
+}
+```
+
+### SPARQL Query
+
+```bru
+body:sparql {
+  SELECT * WHERE {
+    ?subject ?predicate ?object .
+  }
+  LIMIT 10
+}
+```
+
+### Form URL Encoded
+
+```bru
+body:form-urlencoded {
+  username: john
+  password: secret
+  ~remember: true
+}
+```
+
+### Multipart Form
+
+```bru
+body:multipart-form {
+  username: john
+  avatar: @file(/path/to/image.png)
+  description: '''
+    User profile
+    description
+  ''' @contentType(text/plain)
+}
+```
+
+### File Upload
+
+```bru
+body:file {
+  file: @file(/path/to/file.pdf) @contentType(application/pdf)
+  ~file: @file(/path/to/disabled.txt)
+}
+```
+
+## Authentication
+
+### No Authentication
+
+```bru
+get {
+  url: https://api.example.com
+  auth: none
+}
+```
+
+### Basic Auth
+
+```bru
+auth:basic {
+  username: admin
+  password: secret123
+}
+```
+
+### Bearer Token
+
+```bru
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+}
+```
+
+### API Key
+
+```bru
+auth:apikey {
+  key: x-api-key
+  value: my-secret-key
+  placement: header
+}
+```
+
+<ParamField path="placement" type="string">
+  Where to place the API key: `header` or `query`
+</ParamField>
+
+### Digest Auth
+
+```bru
+auth:digest {
+  username: john
+  password: secret
+}
+```
+
+### AWS Signature v4
+
+```bru
+auth:awsv4 {
+  accessKeyId: AKIAIOSFODNN7EXAMPLE
+  secretAccessKey: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+  sessionToken: optional-session-token
+  service: execute-api
+  region: us-east-1
+  profileName: default
+}
+```
+
+### OAuth 2.0
+
+#### Authorization Code
+
+```bru
+auth:oauth2 {
+  grant_type: authorization_code
+  callback_url: http://localhost:8080/callback
+  authorization_url: https://auth.example.com/authorize
+  access_token_url: https://auth.example.com/token
+  client_id: my-client-id
+  client_secret: my-client-secret
+  scope: read write
+  state: random-state-string
+  pkce: true
+  auto_fetch_token: true
+  auto_refresh_token: true
+}
+```
+
+#### Client Credentials
+
+```bru
+auth:oauth2 {
+  grant_type: client_credentials
+  access_token_url: https://auth.example.com/token
+  client_id: my-client-id
+  client_secret: my-client-secret
+  scope: read write
+}
+```
+
+#### Password Grant
+
+```bru
+auth:oauth2 {
+  grant_type: password
+  access_token_url: https://auth.example.com/token
+  username: john@example.com
+  password: secret
+  client_id: my-client-id
+  client_secret: my-client-secret
+}
+```
+
+## Variables
+
+### Pre-Request Variables
+
+```bru
+vars:pre-request {
+  timestamp: {{$timestamp}}
+  requestId: {{$uuid}}
+  @localVar: sensitive-data
+}
+```
+
+<Info>
+  Variables prefixed with `@` are local and not saved to the file.
+</Info>
+
+### Post-Response Variables
+
+```bru
+vars:post-response {
+  token: $res.body.token
+  userId: $res.body.user.id
+  @sessionId: $res.body.sessionId
+}
+```
+
+## Assertions
+
+```bru
+assert {
+  $res.status: 200
+  $res.body.message: success
+  $res.body.user.id: 123
+  ~$res.body.debug: enabled
+}
+```
+
+## Scripts
+
+### Pre-Request Script
+
+```bru
+script:pre-request {
+  const timestamp = Date.now();
+  bru.setVar("timestamp", timestamp);
+  
+  const signature = crypto
+    .createHash('sha256')
+    .update(timestamp.toString())
+    .digest('hex');
+  bru.setVar("signature", signature);
+}
+```
+
+### Post-Response Script
+
+```bru
+script:post-response {
+  const body = res.getBody();
+  bru.setEnvVar("authToken", body.token);
+}
+```
+
+### Tests
+
+```bru
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should have token", function() {
+    const body = res.getBody();
+    expect(body.token).to.be.ok;
+  });
+}
+```
+
+## Documentation
+
+```bru
+docs {
+  This endpoint creates a new user account.
+  
+  Requirements:
+  - Valid authentication token
+  - Unique email address
+  - Password must be at least 8 characters
+}
+```
+
+## Settings
+
+```bru
+settings {
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  encodeUrl: true
+  keepAliveInterval: 30
+}
+```
+
+<ParamField path="timeout" type="number">
+  Request timeout in milliseconds (0 = no timeout)
+</ParamField>
+
+<ParamField path="followRedirects" type="boolean">
+  Whether to follow HTTP redirects
+</ParamField>
+
+<ParamField path="maxRedirects" type="number">
+  Maximum number of redirects to follow
+</ParamField>
+
+<ParamField path="encodeUrl" type="boolean">
+  Whether to encode URL parameters
+</ParamField>
+
+<ParamField path="keepAliveInterval" type="number">
+  Keep-alive interval in seconds for WebSocket connections
+</ParamField>
+
+## Variable Interpolation
+
+Use double curly braces to reference variables:
+
+```bru
+get {
+  url: {{baseUrl}}/users/{{userId}}
+}
+
+headers {
+  authorization: Bearer {{token}}
+  x-request-id: {{$uuid}}
+}
+
+body:json {
+  {
+    "timestamp": "{{$timestamp}}",
+    "user": "{{username}}"
+  }
+}
+```
+
+### Built-in Variables
+
+- `{{$uuid}}` - Generate a random UUID
+- `{{$timestamp}}` - Current Unix timestamp
+- `{{$isoTimestamp}}` - Current ISO 8601 timestamp
+- `{{$randomInt}}` - Random integer
+- `{{$randomEmail}}` - Random email address
+
+## Comments
+
+Bru does not support inline comments. Use the `docs` block for documentation.
+
+## Complete Example
+
+```bru
+meta {
+  name: Create User
+  type: http
+  seq: 1
+  tags: [
+    users
+    create
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/users
+  body: json
+  auth: bearer
+}
+
+params:query {
+  notify: true
+  ~debug: false
+}
+
+headers {
+  content-type: application/json
+  x-request-id: {{$uuid}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "username": "johndoe",
+    "email": "john@example.com",
+    "profile": {
+      "firstName": "John",
+      "lastName": "Doe"
+    }
+  }
+}
+
+vars:pre-request {
+  timestamp: {{$timestamp}}
+}
+
+vars:post-response {
+  userId: $res.body.id
+  userToken: $res.body.token
+}
+
+assert {
+  $res.status: 201
+  $res.body.id: isDefined
+}
+
+script:pre-request {
+  console.log("Creating user...");
+}
+
+tests {
+  test("User created successfully", function() {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().id).to.be.ok;
+  });
+}
+
+docs {
+  Creates a new user account with the provided information.
+  Returns the created user object with ID and token.
+}
+
+settings {
+  timeout: 30000
+  followRedirects: true
+}
+```
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Request Format" icon="file-code" href="/api/request-format">
+    Detailed request file format specification
+  </Card>
+  <Card title="Collection Format" icon="folder-tree" href="/api/collection-format">
+    Collection and environment file formats
+  </Card>
+</CardGroup>

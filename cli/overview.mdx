@@ -1,0 +1,121 @@
+---
+title: CLI Overview
+description: Run and automate your API tests from the command line with Bruno CLI
+---
+
+# CLI Overview
+
+Bruno CLI (`bru`) allows you to run your API collections from the command line, making it easy to:
+
+- Test APIs in different environments
+- Automate testing workflows
+- Integrate with CI/CD pipelines
+- Run tests in headless environments
+
+The CLI reads the same `.bru` files you create in the Bruno desktop app, ensuring consistency between manual and automated testing.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Environment Support" icon="layer-group">
+    Switch between environments and override variables on the fly
+  </Card>
+  <Card title="Multiple Reporters" icon="file-lines">
+    Export results as JSON, JUnit, or HTML for CI/CD integration
+  </Card>
+  <Card title="Flexible Execution" icon="play">
+    Run individual requests, folders, or entire collections recursively
+  </Card>
+  <Card title="Custom Certificates" icon="certificate">
+    Add custom CA certificates and client certificates for secure connections
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+Navigate to your collection directory and run all requests:
+
+```bash
+bru run
+```
+
+Run a specific request:
+
+```bash
+bru run request.bru
+```
+
+Run with a specific environment:
+
+```bash
+bru run --env production
+```
+
+## Common Use Cases
+
+### CI/CD Integration
+
+Generate JUnit reports for your CI/CD pipeline:
+
+```bash
+bru run --reporter-junit results.xml
+```
+
+### Environment Testing
+
+Test against multiple environments with overrides:
+
+```bash
+bru run --env staging --env-var apiKey=test123
+```
+
+### Selective Testing
+
+Run only requests that have tests:
+
+```bash
+bru run --tests-only
+```
+
+### Filtered Execution
+
+Run requests with specific tags:
+
+```bash
+bru run --tags=smoke,critical --exclude-tags=skip
+```
+
+## Exit Codes
+
+Bruno CLI returns specific exit codes for scripting and automation:
+
+| Exit Code | Description |
+|-----------|-------------|
+| `0` | Execution successful |
+| `1` | An assertion, test, or request failed |
+| `2` | The specified output directory does not exist |
+| `3` | The request chain loops endlessly |
+| `4` | Bru was called outside of a collection root directory |
+| `5` | The specified input file does not exist |
+| `6` | The specified environment does not exist |
+| `7` | The environment override was not a string or object |
+| `8` | An environment override is malformed |
+| `9` | An invalid output format was requested |
+| `255` | Another error occurred |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/cli/installation">
+    Install Bruno CLI globally or in your project
+  </Card>
+  <Card title="Running Tests" icon="flask" href="/cli/running-tests">
+    Learn how to run API tests with various options
+  </Card>
+  <Card title="CLI Options" icon="sliders" href="/cli/options">
+    Complete reference of all CLI flags and options
+  </Card>
+  <Card title="Importing Collections" icon="file-import" href="/cli/importing-collections">
+    Import collections from OpenAPI and other formats
+  </Card>
+</CardGroup>

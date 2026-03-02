@@ -1,0 +1,453 @@
+---
+title: Request Types
+description: Comprehensive guide to REST, GraphQL, gRPC, and WebSocket support in Bruno
+---
+
+Bruno supports multiple API protocols and request types, making it a versatile tool for modern API development and testing.
+
+## HTTP/REST Requests
+
+HTTP requests are the most common type in Bruno, managed by the `HttpRequestPane` component.
+
+### Supported HTTP Methods
+
+<Tabs>
+  <Tab title="GET">
+    Retrieve resources from the server.
+    
+    ```bru
+    meta {
+      name: Get Users
+      type: http
+    }
+    
+    get {
+      url: {{api_url}}/users
+      body: none
+      auth: none
+    }
+    
+    assert {
+      res.status: eq 200
+    }
+    ```
+  </Tab>
+  <Tab title="POST">
+    Create new resources.
+    
+    ```bru
+    meta {
+      name: Create User
+      type: http
+    }
+    
+    post {
+      url: {{api_url}}/users
+      body: json
+      auth: bearer
+    }
+    
+    body:json {
+      {
+        "name": "John Doe",
+        "email": "john@example.com",
+        "role": "user"
+      }
+    }
+    
+    auth:bearer {
+      token: {{access_token}}
+    }
+    ```
+  </Tab>
+  <Tab title="PUT/PATCH">
+    Update existing resources.
+    
+    ```bru
+    meta {
+      name: Update User
+      type: http
+    }
+    
+    patch {
+      url: {{api_url}}/users/{{user_id}}
+      body: json
+      auth: bearer
+    }
+    
+    body:json {
+      {
+        "name": "Jane Doe"
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="DELETE">
+    Remove resources.
+    
+    ```bru
+    meta {
+      name: Delete User
+      type: http
+    }
+    
+    delete {
+      url: {{api_url}}/users/{{user_id}}
+      body: none
+      auth: bearer
+    }
+    
+    auth:bearer {
+      token: {{access_token}}
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Request Body Types
+
+The `RequestBody` component supports multiple content types:
+
+<CardGroup cols={2}>
+  <Card title="JSON" icon="brackets-curly">
+    Most common format for RESTful APIs. Syntax highlighting with CodeMirror using `application/ld+json` mode.
+  </Card>
+  <Card title="XML" icon="code">
+    For SOAP and legacy APIs. Uses `application/xml` mode.
+  </Card>
+  <Card title="Form URL Encoded" icon="table">
+    Managed by `FormUrlEncodedParams` component. Standard HTML form submissions.
+  </Card>
+  <Card title="Multipart Form" icon="file-upload">
+    Handled by `MultipartFormParams`. Supports file uploads and mixed content types.
+  </Card>
+  <Card title="Text" icon="font">
+    Plain text with `application/text` mode.
+  </Card>
+  <Card title="SPARQL" icon="database">
+    Specialized query language support with `application/sparql-query` mode.
+  </Card>
+</CardGroup>
+
+### Form URL Encoded Example
+
+From the test suite:
+
+```bru Example from bruno-tests/collection/echo/echo form-url-encoded.bru
+meta {
+  name: echo form-url-encoded
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{echo-host}}
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  form-data-key: {{form-data-key}}
+  form-data-stringified-object: {{form-data-stringified-object}}
+  key_1: value_1
+  key_2: value_2
+  key_1: value_3
+  key_2: value_4
+}
+
+script:pre-request {
+  let obj = JSON.stringify({foo:123});
+  bru.setVar('form-data-key', 'form-data-value');
+  bru.setVar('form-data-stringified-object', obj);
+}
+```
+
+<Info>
+  Form URL encoded bodies support duplicate keys for array-like data, as shown with `key_1` and `key_2` above.
+</Info>
+
+## GraphQL Requests
+
+Bruno has first-class support for GraphQL, managed by the `GraphQLRequestPane` component.
+
+### Creating GraphQL Requests
+
+<Steps>
+  <Step title="Create GraphQL Request">
+    When creating a new request, select "GraphQL" as the type.
+  </Step>
+  <Step title="Enter GraphQL Endpoint">
+    Provide the GraphQL endpoint URL (e.g., `https://api.example.com/graphql`).
+  </Step>
+  <Step title="Write Query">
+    Use the `QueryEditor` component to write your GraphQL query or mutation.
+  </Step>
+  <Step title="Add Variables">
+    Configure variables using the `GraphQLVariables` component.
+  </Step>
+</Steps>
+
+### GraphQL Query Example
+
+From the test suite:
+
+```bru Example from bruno-tests/collection/graphql/spacex.bru
+meta {
+  name: spacex
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: https://spacex-production.up.railway.app/
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  {
+    company {
+      ceo
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+```
+
+### GraphQL Features
+
+<AccordionGroup>
+  <Accordion title="Query & Mutation Support">
+    Write queries to fetch data and mutations to modify data. The editor provides syntax highlighting for GraphQL.
+  </Accordion>
+  <Accordion title="Variables">
+    Define variables separately in the `GraphQLVariables` component and reference them in your query using `$variableName`.
+  </Accordion>
+  <Accordion title="Schema Introspection">
+    The `GraphQLSchemaActions` component allows you to fetch and view the GraphQL schema for autocomplete and validation.
+  </Accordion>
+  <Accordion title="Variable Interpolation">
+    Use Bruno variables in GraphQL queries: `{{api_url}}`, `{{user_id}}`, etc.
+  </Accordion>
+</AccordionGroup>
+
+### GraphQL with Variables
+
+```graphql Query
+query GetUser($userId: ID!) {
+  user(id: $userId) {
+    id
+    name
+    email
+    posts {
+      title
+      publishedAt
+    }
+  }
+}
+```
+
+```json Variables
+{
+  "userId": "{{user_id}}"
+}
+```
+
+## gRPC Requests
+
+Bruno supports gRPC requests through the `GrpcRequestPane` component.
+
+### Setting Up gRPC
+
+<Steps>
+  <Step title="Configure Protobuf Files">
+    In Collection Settings, navigate to the "Protobuf" tab and add your `.proto` files.
+  </Step>
+  <Step title="Create gRPC Request">
+    Create a new request and select "gRPC" as the type.
+  </Step>
+  <Step title="Configure URL">
+    Use the `GrpcQueryUrl` component to enter the gRPC server address.
+  </Step>
+  <Step title="Select Method">
+    Choose the gRPC method from your protobuf definition.
+  </Step>
+  <Step title="Configure Body">
+    Use the `GrpcBody` component to provide the request message in JSON format.
+  </Step>
+</Steps>
+
+### gRPC Features
+
+<CardGroup cols={2}>
+  <Card title="Unary RPC" icon="arrow-right">
+    Single request, single response.
+  </Card>
+  <Card title="Server Streaming" icon="arrow-down">
+    Single request, stream of responses.
+  </Card>
+  <Card title="Client Streaming" icon="arrow-up">
+    Stream of requests, single response.
+  </Card>
+  <Card title="Bidirectional Streaming" icon="arrows-left-right">
+    Stream of requests and responses.
+  </Card>
+</CardGroup>
+
+### Protobuf Configuration
+
+In `CollectionSettings/Protobuf`, configure proto files:
+
+```text Directory Structure
+collection/
+├── bruno.json
+├── proto/
+│   ├── user.proto
+│   └── product.proto
+└── requests/
+    └── get_user.bru
+```
+
+The protobuf configuration allows Bruno to understand message types and provide validation.
+
+## WebSocket Requests
+
+Bruno supports WebSocket connections through the `WSRequestPane` component.
+
+### Creating WebSocket Connections
+
+<Steps>
+  <Step title="Create WebSocket Request">
+    Select "WebSocket" when creating a new request.
+  </Step>
+  <Step title="Enter WebSocket URL">
+    Use the `WsQueryUrl` component to provide the `ws://` or `wss://` URL.
+  </Step>
+  <Step title="Configure Settings">
+    Use `WSSettingsPane` to set connection options.
+  </Step>
+  <Step title="Connect">
+    Click Connect to establish the WebSocket connection.
+  </Step>
+  <Step title="Send Messages">
+    Use the `WsBody` component to send messages through the connection.
+  </Step>
+</Steps>
+
+### WebSocket Features
+
+<Accordion title="Message Types">
+  Send and receive text or binary messages. The `WsBody` component handles message composition.
+</Accordion>
+
+<Accordion title="Connection Management">
+  Connect, disconnect, and reconnect to WebSocket servers. Connection state is managed in Redux.
+</Accordion>
+
+<Accordion title="Message History">
+  View all sent and received messages in the response pane with timestamps.
+</Accordion>
+
+### WebSocket Example
+
+```bru WebSocket Request
+meta {
+  name: Chat WebSocket
+  type: websocket
+}
+
+ws {
+  url: wss://echo.websocket.org
+}
+
+body:text {
+  {
+    "type": "message",
+    "content": "Hello WebSocket!"
+  }
+}
+```
+
+## Request Type Selection
+
+When creating a request, Bruno determines which pane to display based on the `type` metadata:
+
+- `type: http` → `HttpRequestPane`
+- `type: graphql` → `GraphQLRequestPane`
+- `type: grpc` → `GrpcRequestPane`  
+- `type: websocket` → `WSRequestPane`
+
+The sidebar uses `CollectionItemIcon` component to display different icons based on request type.
+
+## Advanced Features
+
+### Request Chaining
+
+Use post-response scripts to extract data and use it in subsequent requests:
+
+```javascript Post-Response Script
+const userId = res.body.id;
+bru.setVar('user_id', userId);
+```
+
+Then reference in next request:
+
+```text
+GET {{api_url}}/users/{{user_id}}/orders
+```
+
+### Collection Runner
+
+Run multiple requests in sequence:
+
+<Steps>
+  <Step title="Right-click Folder">
+    Right-click a folder containing multiple requests.
+  </Step>
+  <Step title="Select 'Run'">
+    Opens the `RunCollectionItem` modal.
+  </Step>
+  <Step title="Configure Run">
+    Select requests to run and set options (environment, iterations, etc.).
+  </Step>
+  <Step title="View Results">
+    Results are displayed in the `RunnerResults` component.
+  </Step>
+</Steps>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Choose the Right Type">
+    Use GraphQL for flexible data fetching, REST for standard CRUD, gRPC for high-performance microservices, and WebSocket for real-time communication.
+  </Accordion>
+  <Accordion title="Organize by Protocol">
+    Create separate folders for different protocols to keep collections organized.
+  </Accordion>
+  <Accordion title="Use Variables for Endpoints">
+    Store base URLs as variables: `{{graphql_endpoint}}`, `{{grpc_host}}`, `{{ws_url}}`.
+  </Accordion>
+  <Accordion title="Document Protocol-Specific Headers">
+    GraphQL often needs `Content-Type: application/json`, gRPC may need custom metadata.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="shield" href="/desktop/authentication">
+    Configure auth for different request types
+  </Card>
+  <Card title="Scripts" icon="file-code" href="/desktop/scripts">
+    Add automation to any request type
+  </Card>
+  <Card title="Tests" icon="check-circle" href="/desktop/tests">
+    Validate responses across all protocols
+  </Card>
+  <Card title="Collection Settings" icon="gear" href="/desktop/collection-settings">
+    Configure protocol-specific settings
+  </Card>
+</CardGroup>

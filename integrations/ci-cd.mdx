@@ -1,0 +1,459 @@
+---
+title: CI/CD Integration
+description: Run Bruno collections in your CI/CD pipelines with the Bruno CLI
+---
+
+## Overview
+
+Bruno CLI enables you to automate API testing in your continuous integration and deployment workflows. Run your collections in GitHub Actions, GitLab CI, Jenkins, or any other CI/CD platform.
+
+## Installation
+
+Install Bruno CLI in your CI environment:
+
+<CodeGroup>
+```bash npm
+npm install -g @usebruno/cli
+```
+
+```bash yarn
+yarn global add @usebruno/cli
+```
+
+```bash pnpm
+pnpm add -g @usebruno/cli
+```
+</CodeGroup>
+
+## Basic Usage
+
+<Steps>
+  <Step title="Navigate to your collection">
+    The Bruno CLI needs to be run from your collection directory.
+    
+    ```bash
+    cd path/to/your-collection
+    ```
+  </Step>
+
+  <Step title="Run all requests">
+    Execute all requests in your collection:
+    
+    ```bash
+    bru run
+    ```
+  </Step>
+
+  <Step title="Check exit codes">
+    Bruno CLI returns different exit codes for scripting:
+    
+    - `0` - Execution successful
+    - `1` - Assertion, test, or request failed
+    - `2` - Output directory doesn't exist
+    - `3` - Infinite loop detected
+    - `4` - Not in collection root directory
+    - `5` - Input file doesn't exist
+    - `6` - Environment doesn't exist
+    - `255` - Other error occurred
+  </Step>
+</Steps>
+
+## Running Specific Tests
+
+### Single Request
+
+Run a specific request file:
+
+```bash
+bru run request.bru
+```
+
+### Folder of Requests
+
+Run all requests in a subfolder:
+
+```bash
+bru run folder
+```
+
+### With Environment
+
+Specify an environment for your tests:
+
+```bash
+bru run folder --env Prod
+```
+
+### Tests Only
+
+Run only requests that have tests defined:
+
+```bash
+bru run --tests-only
+```
+
+## Output and Reporting
+
+### JSON Output
+
+Save test results as JSON:
+
+```bash
+bru run --output results.json
+```
+
+### JUnit Report
+
+Generate JUnit XML for CI integration:
+
+```bash
+bru run --output junit.xml --format junit
+```
+
+### Multiple Reporters
+
+Generate multiple report formats:
+
+```bash
+bru run \
+  --reporter-json results.json \
+  --reporter-junit junit.xml \
+  --reporter-html report.html
+```
+
+## GitHub Actions Integration
+
+Here's a real example from Bruno's own CI pipeline:
+
+<CodeGroup>
+```yaml Basic Setup
+name: API Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run API Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+      
+      - name: Install Bruno CLI
+        run: npm install -g @usebruno/cli
+      
+      - name: Run API Tests
+        run: |
+          cd packages/bruno-tests/collection
+          bru run --env Prod --output junit.xml --format junit
+      
+      - name: Publish Test Report
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          check_name: API Test Results
+          files: packages/bruno-tests/collection/junit.xml
+```
+
+```yaml Multi-OS Matrix
+name: Cross-Platform Tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: CLI Tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+      
+      - name: Install Bruno CLI from NPM
+        run: npm install -g @usebruno/cli
+      
+      - name: Display Bruno CLI Version
+        run: bru --version
+      
+      - name: Run tests
+        run: |
+          cd packages/bruno-tests/collection
+          npm install
+          bru run --env Prod --output junit.xml --format junit
+      
+      - name: Publish Test Report
+        uses: dorny/test-reporter@v2
+        if: success() || failure()
+        with:
+          name: Test Report - ${{ matrix.os }}
+          path: packages/bruno-tests/collection/junit.xml
+          reporter: java-junit
+```
+</CodeGroup>
+
+## GitLab CI Integration
+
+```yaml .gitlab-ci.yml
+stages:
+  - test
+
+api-tests:
+  stage: test
+  image: node:20
+  
+  before_script:
+    - npm install -g @usebruno/cli
+  
+  script:
+    - cd api-tests
+    - bru run --env Production --output results.json
+  
+  artifacts:
+    when: always
+    reports:
+      junit: api-tests/junit.xml
+    paths:
+      - api-tests/results.json
+```
+
+## Jenkins Pipeline
+
+```groovy Jenkinsfile
+pipeline {
+  agent any
+  
+  stages {
+    stage('Install Bruno CLI') {
+      steps {
+        sh 'npm install -g @usebruno/cli'
+      }
+    }
+    
+    stage('Run API Tests') {
+      steps {
+        dir('api-tests') {
+          sh 'bru run --env Production --output junit.xml --format junit'
+        }
+      }
+    }
+  }
+  
+  post {
+    always {
+      junit 'api-tests/junit.xml'
+    }
+  }
+}
+```
+
+## Advanced CLI Options
+
+### Environment Variables
+
+Override individual environment variables:
+
+```bash
+bru run --env Production --env-var API_KEY=secret123
+```
+
+Override multiple variables:
+
+```bash
+bru run \
+  --env Production \
+  --env-var API_KEY=secret123 \
+  --env-var BASE_URL=https://api.staging.example.com
+```
+
+### SSL Certificates
+
+Use custom CA certificates:
+
+```bash
+bru run --cacert myCustomCA.pem
+```
+
+Use only custom CA (ignore default truststore):
+
+```bash
+bru run --cacert myCustomCA.pem --ignore-truststore
+```
+
+### Request Control
+
+<CardGroup cols={2}>
+  <Card title="Bail on Failure" icon="hand">
+    Stop execution after first failure:
+    
+    ```bash
+    bru run --bail
+    ```
+  </Card>
+  
+  <Card title="Add Delay" icon="clock">
+    Add delay between requests (in milliseconds):
+    
+    ```bash
+    bru run --delay 1000
+    ```
+  </Card>
+  
+  <Card title="Skip Headers" icon="eye-slash">
+    Skip headers in reports:
+    
+    ```bash
+    bru run --reporter-skip-all-headers
+    ```
+  </Card>
+  
+  <Card title="Insecure Mode" icon="unlock">
+    Allow insecure server connections:
+    
+    ```bash
+    bru run --insecure
+    ```
+  </Card>
+</CardGroup>
+
+### CSV Data-Driven Testing
+
+Run collection with CSV data:
+
+```bash
+bru run --csv-file-path data.csv
+```
+
+### Client Certificates
+
+Provide client certificate configuration:
+
+```bash
+bru run --client-cert-config cert-config.json
+```
+
+## Docker Integration
+
+Run Bruno tests in a Docker container:
+
+```dockerfile Dockerfile
+FROM node:20-alpine
+
+WORKDIR /tests
+
+# Install Bruno CLI
+RUN npm install -g @usebruno/cli
+
+# Copy collection
+COPY ./api-tests /tests
+
+# Run tests
+CMD ["bru", "run", "--env", "Production", "--output", "results.json"]
+```
+
+Use in CI:
+
+```yaml
+steps:
+  - name: Build test image
+    run: docker build -t api-tests .
+  
+  - name: Run tests
+    run: docker run api-tests
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Store collections in version control">
+    Keep your Bruno collections alongside your code in Git. This ensures tests stay in sync with your API changes.
+  </Accordion>
+  
+  <Accordion title="Use environments for different stages">
+    Create separate environment files for Development, Staging, and Production:
+    
+    ```
+    environments/
+    ├── Development.bru
+    ├── Staging.bru
+    └── Production.bru
+    ```
+  </Accordion>
+  
+  <Accordion title="Generate reports for visibility">
+    Always generate test reports in CI to track failures and history:
+    
+    ```bash
+    bru run --reporter-junit junit.xml --reporter-html report.html
+    ```
+  </Accordion>
+  
+  <Accordion title="Use --bail for fast feedback">
+    In CI pipelines, use `--bail` to fail fast and save build time:
+    
+    ```bash
+    bru run --bail --env Production
+    ```
+  </Accordion>
+  
+  <Accordion title="Keep secrets in CI variables">
+    Never commit sensitive data. Use CI environment variables:
+    
+    ```bash
+    bru run --env Production --env-var API_KEY=$CI_API_KEY
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Exit Codes Reference
+
+Use these exit codes for scripting and CI failure detection:
+
+| Code | Meaning |
+|------|--------|
+| 0 | Execution successful |
+| 1 | Assertion, test, or request failed |
+| 2 | Output directory doesn't exist |
+| 3 | Request chain loops endlessly |
+| 4 | Not in collection root directory |
+| 5 | Input file doesn't exist |
+| 6 | Environment doesn't exist |
+| 7 | Environment override not string or object |
+| 8 | Environment override malformed |
+| 9 | Invalid output format |
+| 255 | Other error occurred |
+
+## Troubleshooting
+
+<Warning>
+  **Error: Not in collection root directory**
+  
+  Make sure you're running `bru` from the directory containing `bruno.json`. Use `cd` to navigate to your collection first.
+</Warning>
+
+<Warning>
+  **Error: Environment doesn't exist**
+  
+  Check that your environment file exists in the `environments/` folder and the name matches exactly (case-sensitive).
+</Warning>
+
+<Tip>
+  **Debugging CI failures**
+  
+  Add the `--output results.json` flag to capture detailed error information for debugging failed CI runs.
+</Tip>

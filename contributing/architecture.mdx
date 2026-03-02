@@ -1,0 +1,397 @@
+---
+title: Project Architecture
+description: Understanding Bruno's technical architecture and monorepo structure
+---
+
+## Overview
+
+Bruno is an Electron-based desktop application built with React. It uses a monorepo structure managed by npm workspaces, with multiple specialized packages working together.
+
+<Info>
+Bruno is offline-only by design. All data is stored locally on your filesystem, with no cloud sync. This ensures your API collections remain private and under your control.
+</Info>
+
+## Technology Stack
+
+### Frontend
+
+<CardGroup cols={2}>
+  <Card title="React 19" icon="react">
+    Modern React with hooks and functional components
+  </Card>
+  <Card title="Redux Toolkit" icon="database">
+    State management with @reduxjs/toolkit
+  </Card>
+  <Card title="Styled Components" icon="paintbrush">
+    CSS-in-JS for component styling
+  </Card>
+  <Card title="Tailwind CSS" icon="wind">
+    Utility-first CSS for layout
+  </Card>
+</CardGroup>
+
+### Build Tools
+
+- **Rsbuild**: Fast build tool for React (development and production)
+- **Electron Builder**: Package and build desktop apps
+- **Babel**: JavaScript transpilation
+- **Jest**: Testing framework
+- **Playwright**: End-to-end testing
+
+### Key Libraries
+
+<Tabs>
+  <Tab title="UI Components">
+    - **CodeMirror 5**: Code editors for requests/responses
+    - **Tabler Icons**: Icon library
+    - **Tippy.js**: Tooltips and popovers
+    - **React DnD**: Drag and drop functionality
+    - **Formik + Yup**: Form handling and validation
+  </Tab>
+  
+  <Tab title="HTTP & Networking">
+    - **Axios**: HTTP client for requests
+    - **httpsnippet**: Generate code snippets
+    - **tough-cookie**: Cookie parsing and handling
+    - **qs**: Query string parsing
+  </Tab>
+  
+  <Tab title="Data Processing">
+    - **GraphQL**: GraphQL support with graphql-request
+    - **js-yaml**: YAML parsing
+    - **json5**: JSON5 parsing
+    - **xml2js**: XML parsing and formatting
+  </Tab>
+  
+  <Tab title="Developer Tools">
+    - **Chokidar**: File system watching
+    - **i18next**: Internationalization
+    - **Moment.js**: Date/time handling
+    - **Prettier**: Code formatting
+  </Tab>
+</Tabs>
+
+## Monorepo Structure
+
+Bruno uses npm workspaces to manage 15+ packages:
+
+```
+bruno/
+├── packages/
+│   ├── bruno-app/          # React frontend application
+│   ├── bruno-electron/     # Electron main process
+│   ├── bruno-cli/          # Command-line interface
+│   ├── bruno-common/       # Shared utilities
+│   ├── bruno-converters/   # Import/export converters
+│   ├── bruno-filestore/    # File system operations
+│   ├── bruno-graphql-docs/ # GraphQL documentation
+│   ├── bruno-js/           # JavaScript sandbox
+│   ├── bruno-lang/         # Bru language parser
+│   ├── bruno-query/        # Query language
+│   ├── bruno-requests/     # HTTP request handling
+│   ├── bruno-schema/       # Schema definitions
+│   ├── bruno-schema-types/ # TypeScript schema types
+│   ├── bruno-tests/        # Test collections
+│   └── bruno-toml/         # TOML parsing
+└── package.json            # Root workspace config
+```
+
+## Core Packages
+
+<AccordionGroup>
+  <Accordion title="bruno-app" icon="desktop">
+    **The React Frontend**
+    
+    Main UI application built with React 19 and Rsbuild. Handles:
+    - Request/response interface
+    - Collection management
+    - Code editors (CodeMirror)
+    - Authentication flows
+    - Environment variables
+    - Testing and assertions
+    
+    **Tech Stack:**
+    - React 19.0.0
+    - Redux Toolkit for state
+    - Styled Components + Tailwind CSS
+    - CodeMirror for code editing
+    - GraphiQL for GraphQL
+  </Accordion>
+  
+  <Accordion title="bruno-electron" icon="window-maximize">
+    **The Electron Main Process**
+    
+    Manages the desktop application shell and native integrations:
+    - Window management
+    - File system access via IPC
+    - Native menus and dialogs
+    - Auto-updates
+    - Terminal integration (@lydell/node-pty)
+    
+    **Key Dependencies:**
+    - Electron 37.6.1
+    - Chokidar for file watching
+    - Electron Store for settings
+  </Accordion>
+  
+  <Accordion title="bruno-cli" icon="terminal">
+    **Command-Line Interface**
+    
+    Run Bruno collections from the command line:
+    - Execute collections programmatically
+    - CI/CD integration
+    - Automated testing
+    - Environment variable support
+    
+    **Published to npm as:** `@usebruno/cli`
+    
+    ```bash
+    # Run a collection
+    bru run collection
+    ```
+  </Accordion>
+  
+  <Accordion title="bruno-lang" icon="code">
+    **Bru Language Parser**
+    
+    Parser for Bruno's `.bru` file format:
+    - Plain text markup language
+    - Git-friendly format
+    - Request/response definitions
+    - Metadata and assertions
+    
+    This is what makes Bruno collections version-control friendly.
+  </Accordion>
+  
+  <Accordion title="bruno-requests" icon="globe">
+    **HTTP Request Engine**
+    
+    Core request handling logic:
+    - HTTP/HTTPS requests
+    - Authentication (Bearer, Basic, OAuth2, AWS Signature)
+    - Proxy support
+    - SSL/TLS configuration
+    - Request/response interceptors
+  </Accordion>
+  
+  <Accordion title="bruno-converters" icon="arrows-left-right">
+    **Import/Export Converters**
+    
+    Convert between different API client formats:
+    - Postman collections
+    - Insomnia collections
+    - OpenAPI/Swagger
+    - HAR files
+    
+    Enables easy migration to Bruno from other tools.
+  </Accordion>
+  
+  <Accordion title="bruno-filestore" icon="folder">
+    **File System Management**
+    
+    Handles collection storage:
+    - Read/write `.bru` files
+    - Collection organization
+    - File system watching
+    - Workspace management
+  </Accordion>
+  
+  <Accordion title="bruno-common" icon="box">
+    **Shared Utilities**
+    
+    Common code shared across packages:
+    - Utility functions
+    - Constants
+    - Type definitions
+    - Shared logic
+  </Accordion>
+  
+  <Accordion title="bruno-schema" icon="shapes">
+    **Schema Definitions**
+    
+    Defines the structure of Bruno collections:
+    - Request schema
+    - Collection schema
+    - Environment schema
+    - Validation rules
+  </Accordion>
+</AccordionGroup>
+
+## Data Flow
+
+<Steps>
+  <Step title="User Interaction">
+    User interacts with the React UI (bruno-app)
+  </Step>
+  
+  <Step title="Redux State">
+    Actions dispatch to Redux store, updating application state
+  </Step>
+  
+  <Step title="IPC Communication">
+    Frontend sends IPC messages to Electron main process for file/system operations
+  </Step>
+  
+  <Step title="File Operations">
+    bruno-filestore reads/writes .bru files using bruno-lang parser
+  </Step>
+  
+  <Step title="Request Execution">
+    bruno-requests handles HTTP requests with appropriate auth and proxies
+  </Step>
+  
+  <Step title="Response Handling">
+    Response flows back through IPC to Redux state, updating UI
+  </Step>
+</Steps>
+
+## File Storage Format
+
+Bruno uses its own `.bru` file format:
+
+```bru Example Request
+meta {
+  name: Get Users
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/users
+}
+
+headers {
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+}
+
+assert {
+  res.status: eq 200
+  res.body.users: isDefined
+}
+```
+
+<Note>
+The `.bru` format is designed to be:
+- **Human-readable**: Easy to understand and edit
+- **Git-friendly**: Produces clean diffs
+- **Plain text**: No binary formats
+</Note>
+
+## Build Process
+
+### Development Build
+
+1. **Package builds**: TypeScript packages compile to JavaScript
+2. **React app**: Rsbuild starts dev server with hot reload
+3. **Electron**: Launches with DevTools enabled
+4. **File watching**: Chokidar monitors collection changes
+
+### Production Build
+
+1. **Build packages**: All TypeScript packages compile
+2. **Bundle React app**: Rsbuild creates optimized production bundle
+3. **Package Electron**: electron-builder creates installers
+4. **Platform-specific**: Separate builds for Mac, Windows, Linux
+
+<CodeGroup>
+```bash Mac
+npm run build:electron:mac
+```
+
+```bash Windows
+npm run build:electron:win
+```
+
+```bash Linux
+npm run build:electron:linux
+npm run build:electron:deb
+npm run build:electron:rpm
+npm run build:electron:snap
+```
+</CodeGroup>
+
+## Testing Architecture
+
+<Tabs>
+  <Tab title="Unit Tests">
+    **Jest** for unit testing:
+    - Package-level tests
+    - Utility function tests
+    - Parser tests
+    - Schema validation tests
+    
+    ```bash
+    npm test --workspaces --if-present
+    ```
+  </Tab>
+  
+  <Tab title="E2E Tests">
+    **Playwright** for end-to-end testing:
+    - Full application flows
+    - Request/response testing
+    - UI interactions
+    - SSL/TLS scenarios
+    
+    ```bash
+    npm run test:e2e
+    ```
+  </Tab>
+  
+  <Tab title="Integration Tests">
+    **Real request testing**:
+    - HTTP/HTTPS requests
+    - Authentication flows
+    - Proxy configurations
+    - GraphQL queries
+  </Tab>
+</Tabs>
+
+## Authentication Architecture
+
+Supported authentication methods:
+
+- **Basic Auth**: Username/password
+- **Bearer Token**: JWT and API tokens
+- **OAuth 2.0**: Full OAuth flow
+- **AWS Signature v4**: AWS API authentication
+- **API Key**: Custom header/query auth
+- **Digest Auth**: RFC 2617 digest authentication
+- **NTLM**: Windows authentication
+
+## Key Design Principles
+
+<CardGroup cols={2}>
+  <Card title="Offline-First" icon="wifi-slash">
+    No cloud dependencies, all data stays local
+  </Card>
+  <Card title="Git-Friendly" icon="git">
+    Plain text format for easy version control
+  </Card>
+  <Card title="Privacy-Focused" icon="lock">
+    Your data never leaves your machine
+  </Card>
+  <Card title="Open Source" icon="code">
+    Transparent, auditable codebase
+  </Card>
+</CardGroup>
+
+## Performance Optimizations
+
+- **Code splitting**: Dynamic imports for large features
+- **Virtualization**: Large lists use react-virtuoso
+- **Memoization**: React.memo and useMemo for expensive renders
+- **Worker threads**: Heavy processing offloaded where possible
+- **Lazy loading**: Components loaded on demand
+
+## Next Steps
+
+Now that you understand Bruno's architecture:
+
+- Review the [coding standards](/contributing/coding-standards)
+- Set up your [development environment](/contributing/development-setup)
+- Start contributing to specific packages
+
+<Tip>
+Start with smaller packages like bruno-common or bruno-converters to get familiar with the codebase before tackling bruno-app or bruno-electron.
+</Tip>

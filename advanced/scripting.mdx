@@ -1,0 +1,464 @@
+---
+title: Advanced Scripting
+description: Master Bruno's powerful scripting capabilities with JavaScript
+---
+
+Bruno provides a powerful JavaScript scripting engine that allows you to automate complex workflows, manipulate requests and responses, and integrate with external libraries. Scripts can be executed at different stages of the request lifecycle.
+
+## Script Types
+
+Bruno supports three types of scripts:
+
+<CardGroup cols={3}>
+  <Card title="Pre-Request" icon="play">
+    Execute before sending the request
+  </Card>
+  <Card title="Post-Response" icon="flag-checkered">
+    Execute after receiving the response
+  </Card>
+  <Card title="Tests" icon="flask">
+    Run assertions and validations
+  </Card>
+</CardGroup>
+
+## Pre-Request Scripts
+
+Pre-request scripts run before Bruno sends the HTTP request. Use them to set headers, modify the request body, generate dynamic values, or perform authentication.
+
+### Basic Example
+
+```javascript
+// Set custom headers
+req.setHeader('X-Request-ID', Date.now().toString());
+req.setHeader('Authorization', 'Bearer ' + bru.getEnvVar('token'));
+
+// Modify request body
+const body = req.getBody();
+body.timestamp = new Date().toISOString();
+req.setBody(body);
+```
+
+### Authentication Example
+
+<CodeGroup>
+```javascript Basic Auth
+const username = "bruno";
+const password = "della";
+
+const authString = `${username}:${password}`;
+const encodedAuthString = require('btoa')(authString);
+
+req.setHeader("Authorization", `Basic ${encodedAuthString}`);
+```
+
+```javascript Dynamic Token
+// Get token from environment
+const apiKey = bru.getEnvVar('apiKey');
+const secret = bru.getEnvVar('secret');
+
+// Generate signature
+const CryptoJS = require('crypto-js');
+const timestamp = Date.now();
+const signature = CryptoJS.HmacSHA256(
+  `${timestamp}${apiKey}`,
+  secret
+).toString();
+
+req.setHeader('X-API-Key', apiKey);
+req.setHeader('X-Timestamp', timestamp);
+req.setHeader('X-Signature', signature);
+```
+</CodeGroup>
+
+### Dynamic Request Body
+
+```javascript
+// Create multipart form data programmatically
+const FormData = require("form-data");
+const form = new FormData();
+
+form.append('user_id', bru.getVar('userId'));
+form.append('file_name', 'document.pdf');
+form.append('timestamp', new Date().toISOString());
+
+req.setBody(form);
+```
+
+## Post-Response Scripts
+
+Post-response scripts execute after receiving the response. Use them to extract data, set variables for subsequent requests, or perform custom processing.
+
+### Extract Response Data
+
+```javascript
+// Parse response and set variables
+const data = res.getBody();
+
+// Set runtime variables
+bru.setVar('userId', data.user.id);
+bru.setVar('sessionToken', data.session.token);
+
+// Set environment variables
+bru.setEnvVar('authToken', data.auth.token);
+
+// Persist variables across collections
+bru.setEnvVar('refreshToken', data.refresh_token, { persist: true });
+```
+
+### Response Transformation
+
+```javascript
+// Modify response for display
+const responseData = res.getBody();
+
+// Filter sensitive data
+delete responseData.password;
+delete responseData.creditCard;
+
+// Add computed fields
+responseData.fullName = `${responseData.firstName} ${responseData.lastName}`;
+responseData.isActive = responseData.status === 'active';
+
+res.setBody(responseData);
+```
+
+## Test Scripts
+
+Test scripts allow you to write assertions and validations using Chai assertion library.
+
+### Basic Tests
+
+```javascript
+test("should return successful response", function() {
+  const data = res.getBody();
+  expect(res.getStatus()).to.equal(200);
+  expect(data).to.have.property('success', true);
+});
+
+test("response time is acceptable", function() {
+  expect(res.getResponseTime()).to.be.below(2000);
+});
+```
+
+### Advanced Assertions
+
+<CodeGroup>
+```javascript Data Validation
+test("validate user object", function() {
+  const data = res.getBody();
+  
+  expect(data).to.have.property('user');
+  expect(data.user).to.be.an('object');
+  expect(data.user.email).to.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+  expect(data.user.age).to.be.a('number').and.to.be.at.least(18);
+  expect(data.user.roles).to.be.an('array').that.includes('user');
+});
+```
+
+```javascript Async Tests
+await test("fetch additional data", async () => {
+  const response = await bru.sendRequest({
+    url: 'https://api.example.com/verify',
+    method: 'POST',
+    data: { token: res.getBody().token }
+  });
+  
+  expect(response.status).to.equal(200);
+  expect(response.data.valid).to.be.true;
+});
+```
+
+```javascript JWT Validation
+test("validate JWT token", function() {
+  const jwt = require('jsonwebtoken');
+  const token = res.getHeader('Authorization').replace('Bearer ', '');
+  
+  const decoded = jwt.decode(token);
+  expect(decoded).to.have.property('exp');
+  expect(decoded.exp).to.be.greaterThan(Date.now() / 1000);
+  expect(decoded.userId).to.equal(bru.getVar('expectedUserId'));
+});
+```
+</CodeGroup>
+
+## Request and Response API
+
+### Request Object (`req`)
+
+<AccordionGroup>
+  <Accordion title="URL Methods">
+    ```javascript
+    req.getUrl()              // Get full URL
+    req.setUrl(url)           // Set URL
+    req.getHost()             // Get hostname
+    req.getPath()             // Get path
+    req.getQueryString()      // Get query string
+    ```
+  </Accordion>
+
+  <Accordion title="Header Methods">
+    ```javascript
+    req.getHeaders()          // Get all headers
+    req.getHeader(name)       // Get specific header
+    req.setHeader(name, val)  // Set header
+    req.setHeaders(obj)       // Set multiple headers
+    req.deleteHeader(name)    // Delete header
+    req.deleteHeaders(arr)    // Delete multiple headers
+    ```
+  </Accordion>
+
+  <Accordion title="Body Methods">
+    ```javascript
+    req.getBody()             // Get parsed body
+    req.getBody({ raw: true })// Get raw body string
+    req.setBody(data)         // Set body (auto-stringifies JSON)
+    req.setBody(data, { raw: true }) // Set raw body
+    ```
+  </Accordion>
+
+  <Accordion title="Other Methods">
+    ```javascript
+    req.getMethod()           // Get HTTP method
+    req.setMethod(method)     // Set HTTP method
+    req.getName()             // Get request name
+    req.getPathParams()       // Get path parameters
+    req.getTags()             // Get request tags
+    req.setTimeout(ms)        // Set timeout
+    req.setMaxRedirects(num)  // Set max redirects
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Response Object (`res`)
+
+<AccordionGroup>
+  <Accordion title="Status Methods">
+    ```javascript
+    res.getStatus()           // Get status code
+    res.getStatusText()       // Get status text
+    res.getResponseTime()     // Get response time in ms
+    ```
+  </Accordion>
+
+  <Accordion title="Header Methods">
+    ```javascript
+    res.getHeaders()          // Get all headers
+    res.getHeader(name)       // Get specific header
+    ```
+  </Accordion>
+
+  <Accordion title="Body Methods">
+    ```javascript
+    res.getBody()             // Get parsed response body
+    res.setBody(data)         // Modify response body
+    res.getDataBuffer()       // Get raw buffer
+    res.getSize()             // Get size { header, body, total }
+    ```
+  </Accordion>
+
+  <Accordion title="Direct Access">
+    ```javascript
+    // Shorthand property access
+    res.status                // Same as res.getStatus()
+    res.headers               // Same as res.getHeaders()
+    res.body                  // Same as res.getBody()
+    
+    // Query response data directly
+    res('user.email')         // Get nested property
+    res('items[0].name')      // Array access
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Built-in Libraries
+
+Bruno includes several libraries for common tasks:
+
+<CardGroup cols={2}>
+  <Card title="crypto-js" icon="lock">
+    Encryption and hashing
+    ```javascript
+    const CryptoJS = require('crypto-js');
+    const hash = CryptoJS.SHA256('message');
+    const encrypted = CryptoJS.AES.encrypt('data', 'key');
+    ```
+  </Card>
+
+  <Card title="axios" icon="globe">
+    HTTP client for making requests
+    ```javascript
+    const axios = require('axios');
+    const response = await axios.get('https://api.example.com');
+    ```
+  </Card>
+
+  <Card title="uuid" icon="fingerprint">
+    Generate unique identifiers
+    ```javascript
+    const { v4: uuidv4 } = require('uuid');
+    const id = uuidv4();
+    ```
+  </Card>
+
+  <Card title="cheerio" icon="code">
+    Parse and query HTML
+    ```javascript
+    const cheerio = require('cheerio');
+    const $ = cheerio.load(res.getBody());
+    const title = $('title').text();
+    ```
+  </Card>
+
+  <Card title="jsonwebtoken" icon="key">
+    Work with JWT tokens
+    ```javascript
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.decode(token);
+    ```
+  </Card>
+
+  <Card title="xml2js" icon="file-code">
+    Parse XML responses
+    ```javascript
+    const xml2js = require('xml2js');
+    const parser = new xml2js.Parser();
+    const result = await parser.parseStringPromise(xmlString);
+    ```
+  </Card>
+</CardGroup>
+
+<Tip>
+  All built-in libraries are available without installation. Just `require()` them in your scripts.
+</Tip>
+
+## Advanced Patterns
+
+### Chaining Requests
+
+```javascript
+// Make additional requests within scripts
+await test("create and verify user", async () => {
+  // Create user
+  const createRes = await bru.sendRequest({
+    url: 'https://api.example.com/users',
+    method: 'POST',
+    data: { name: 'John Doe', email: 'john@example.com' }
+  });
+  
+  const userId = createRes.data.id;
+  bru.setVar('newUserId', userId);
+  
+  // Verify user was created
+  const verifyRes = await bru.sendRequest({
+    url: `https://api.example.com/users/${userId}`,
+    method: 'GET'
+  });
+  
+  expect(verifyRes.data.name).to.equal('John Doe');
+});
+```
+
+### Error Handling
+
+```javascript
+try {
+  const response = await bru.sendRequest({
+    url: 'https://api.example.com/data',
+    method: 'GET'
+  });
+  
+  bru.setVar('data', response.data);
+} catch (error) {
+  console.error('Request failed:', error.message);
+  
+  // Handle specific error cases
+  if (error.status === 404) {
+    bru.setVar('dataNotFound', true);
+  } else {
+    throw error; // Re-throw unexpected errors
+  }
+}
+```
+
+### Custom Utilities
+
+```javascript
+// Create reusable utility functions
+function generateRequestId() {
+  const { v4: uuidv4 } = require('uuid');
+  return `req_${uuidv4()}`;
+}
+
+function signRequest(method, path, body) {
+  const CryptoJS = require('crypto-js');
+  const secret = bru.getEnvVar('apiSecret');
+  const timestamp = Date.now();
+  const payload = `${method}${path}${timestamp}${JSON.stringify(body)}`;
+  return CryptoJS.HmacSHA256(payload, secret).toString();
+}
+
+// Use utilities
+const requestId = generateRequestId();
+const signature = signRequest('POST', '/api/data', req.getBody());
+
+req.setHeader('X-Request-ID', requestId);
+req.setHeader('X-Signature', signature);
+```
+
+<Note>
+  Scripts run in a sandboxed environment. Use Developer Mode for full Node.js access.
+</Note>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep Scripts Focused">
+    Each script should have a single, clear purpose. Separate setup, execution, and validation logic.
+  </Accordion>
+
+  <Accordion title="Use Descriptive Test Names">
+    ```javascript
+    // Good
+    test("should return user profile with email and name", function() { ... });
+    
+    // Bad
+    test("test1", function() { ... });
+    ```
+  </Accordion>
+
+  <Accordion title="Handle Async Operations Properly">
+    Always use `await` with async operations and wrap tests with `await test()`:
+    ```javascript
+    await test("async test", async () => {
+      const result = await someAsyncOperation();
+      expect(result).to.be.ok;
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Clean Up Resources">
+    Clear sensitive data and temporary variables after use:
+    ```javascript
+    // After tests complete
+    bru.deleteVar('tempToken');
+    bru.deleteVar('sessionId');
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Variables" icon="brackets-curly" href="/advanced/variables">
+    Learn about variable scopes and management
+  </Card>
+  <Card title="Assertions" icon="check" href="/advanced/assertions">
+    Master test assertions and operators
+  </Card>
+  <Card title="Workflows" icon="diagram-project" href="/advanced/workflows">
+    Build complex multi-request workflows
+  </Card>
+  <Card title="Environments" icon="layer-group" href="/concepts/environments">
+    Manage environment variables
+  </Card>
+</CardGroup>

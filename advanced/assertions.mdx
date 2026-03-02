@@ -1,0 +1,749 @@
+---
+title: Assertions
+description: Master test assertions and response validation in Bruno
+---
+
+Bruno provides a comprehensive assertion system for validating API responses. Use assertions to verify status codes, check response data, validate schemas, and ensure your APIs behave correctly.
+
+## Assertion Methods
+
+Bruno supports two ways to write assertions:
+
+<CardGroup cols={2}>
+  <Card title="Inline Assertions" icon="list-check">
+    Quick assertions in the `assert` block
+  </Card>
+  <Card title="Test Scripts" icon="code">
+    Complex validations using JavaScript and Chai
+  </Card>
+</CardGroup>
+
+## Inline Assertions
+
+Inline assertions provide a simple, declarative way to validate responses without writing JavaScript.
+
+### Basic Syntax
+
+```plaintext
+assert {
+  res.status: eq 200
+  res.body.message: eq Authentication successful
+  res.body.user.email: contains @example.com
+}
+```
+
+### Assertion Operators
+
+Bruno supports a rich set of operators for different validation needs:
+
+<AccordionGroup>
+  <Accordion title="Equality Operators">
+    <ResponseField name="eq" type="operator">
+      Equal to
+      ```plaintext
+      res.body.string: eq foo
+      res.body.number: eq 123
+      res.body.null: eq null
+      res.body.true: eq true
+      res.body.false: eq false
+      ```
+    </ResponseField>
+
+    <ResponseField name="neq" type="operator">
+      Not equal to
+      ```plaintext
+      res.body.status: neq pending
+      res.body.count: neq 0
+      ```
+    </ResponseField>
+  </Accordion>
+
+  <Accordion title="Comparison Operators">
+    <ResponseField name="gt" type="operator">
+      Greater than
+      ```plaintext
+      res.body.age: gt 18
+      res.body.score: gt 0
+      ```
+    </ResponseField>
+
+    <ResponseField name="gte" type="operator">
+      Greater than or equal to
+      ```plaintext
+      res.body.quantity: gte 1
+      res.body.percentage: gte 0
+      ```
+    </ResponseField>
+
+    <ResponseField name="lt" type="operator">
+      Less than
+      ```plaintext
+      res.body.price: lt 100
+      res.body.timeout: lt 5000
+      ```
+    </ResponseField>
+
+    <ResponseField name="lte" type="operator">
+      Less than or equal to
+      ```plaintext
+      res.body.maxUsers: lte 1000
+      res.getResponseTime(): lte 2000
+      ```
+    </ResponseField>
+  </Accordion>
+
+  <Accordion title="Membership Operators">
+    <ResponseField name="in" type="operator">
+      Value is in list
+      ```plaintext
+      res.body.status: in active,pending,completed
+      res.body.type: in [user, admin, guest]
+      res.body.code: in 200,201,204
+      ```
+    </ResponseField>
+
+    <ResponseField name="notIn" type="operator">
+      Value is not in list
+      ```plaintext
+      res.body.status: notIn deleted,archived
+      res.body.role: notIn [banned, suspended]
+      ```
+    </ResponseField>
+  </Accordion>
+
+  <Accordion title="String Operators">
+    <ResponseField name="contains" type="operator">
+      String/array contains value
+      ```plaintext
+      res.body.message: contains success
+      res.body.email: contains @example.com
+      res.body: contains form-data-value
+      ```
+    </ResponseField>
+
+    <ResponseField name="notContains" type="operator">
+      String/array does not contain value
+      ```plaintext
+      res.body.message: notContains error
+      res.body.description: notContains deprecated
+      ```
+    </ResponseField>
+
+    <ResponseField name="startsWith" type="operator">
+      String starts with value
+      ```plaintext
+      res.body.url: startsWith https://
+      res.body.prefix: startsWith API_
+      ```
+    </ResponseField>
+
+    <ResponseField name="endsWith" type="operator">
+      String ends with value
+      ```plaintext
+      res.body.filename: endsWith .pdf
+      res.body.email: endsWith @example.com
+      ```
+    </ResponseField>
+
+    <ResponseField name="matches" type="operator">
+      Matches regular expression
+      ```plaintext
+      res.body.email: matches ^[^\s@]+@[^\s@]+\.[^\s@]+$
+      res.body.phone: matches /^\d{3}-\d{3}-\d{4}$/
+      res.body.uuid: matches [0-9a-f]{8}-[0-9a-f]{4}
+      ```
+    </ResponseField>
+
+    <ResponseField name="notMatches" type="operator">
+      Does not match regular expression
+      ```plaintext
+      res.body.username: notMatches \s
+      res.body.code: notMatches [^a-zA-Z0-9]
+      ```
+    </ResponseField>
+  </Accordion>
+
+  <Accordion title="Length & Range Operators">
+    <ResponseField name="length" type="operator">
+      Length equals value
+      ```plaintext
+      res.body.items: length 10
+      res.body.code: length 6
+      res.body.apiKey: length 32
+      ```
+    </ResponseField>
+
+    <ResponseField name="between" type="operator">
+      Value is between min and max (inclusive)
+      ```plaintext
+      res.body.age: between 18,65
+      res.body.price: between 9.99,99.99
+      res.getResponseTime(): between 0,2000
+      ```
+    </ResponseField>
+  </Accordion>
+
+  <Accordion title="Type Checking Operators">
+    <ResponseField name="isNull" type="operator">
+      Value is null
+      ```plaintext
+      res.body.deletedAt: isNull
+      res.body.optional: isNull
+      ```
+    </ResponseField>
+
+    <ResponseField name="isUndefined" type="operator">
+      Value is undefined
+      ```plaintext
+      res.body.nonexistent: isUndefined
+      ```
+    </ResponseField>
+
+    <ResponseField name="isDefined" type="operator">
+      Value is not undefined
+      ```plaintext
+      res.body.userId: isDefined
+      res.body.email: isDefined
+      ```
+    </ResponseField>
+
+    <ResponseField name="isJson" type="operator">
+      Value is a JSON object
+      ```plaintext
+      res.body.metadata: isJson
+      res.body.config: isJson
+      ```
+    </ResponseField>
+
+    <ResponseField name="isNumber" type="operator">
+      Value is a number
+      ```plaintext
+      res.body.count: isNumber
+      res.body.price: isNumber
+      ```
+    </ResponseField>
+
+    <ResponseField name="isString" type="operator">
+      Value is a string
+      ```plaintext
+      res.body.name: isString
+      res.body.email: isString
+      ```
+    </ResponseField>
+
+    <ResponseField name="isBoolean" type="operator">
+      Value is a boolean
+      ```plaintext
+      res.body.isActive: isBoolean
+      res.body.verified: isBoolean
+      ```
+    </ResponseField>
+
+    <ResponseField name="isArray" type="operator">
+      Value is an array
+      ```plaintext
+      res.body.items: isArray
+      res.body.tags: isArray
+      ```
+    </ResponseField>
+  </Accordion>
+
+  <Accordion title="State Operators">
+    <ResponseField name="isEmpty" type="operator">
+      Value is empty (string, array, or object)
+      ```plaintext
+      res.body.description: isEmpty
+      res.body.items: isEmpty
+      ```
+    </ResponseField>
+
+    <ResponseField name="isNotEmpty" type="operator">
+      Value is not empty
+      ```plaintext
+      res.body.message: isNotEmpty
+      res.body.results: isNotEmpty
+      ```
+    </ResponseField>
+
+    <ResponseField name="isTruthy" type="operator">
+      Value is truthy (true, non-zero number, non-empty string)
+      ```plaintext
+      res.body.success: isTruthy
+      ```
+    </ResponseField>
+
+    <ResponseField name="isFalsy" type="operator">
+      Value is falsy (false, 0, empty string, null, undefined)
+      ```plaintext
+      res.body.error: isFalsy
+      ```
+    </ResponseField>
+  </Accordion>
+</AccordionGroup>
+
+### Real-World Examples
+
+<CodeGroup>
+```plaintext String Assertions
+assert {
+  res.body.string: eq foo
+  res.body.string: eq 'foo'
+  res.body.string: eq "foo"
+  res.body.stringWithSQuotes: eq "'foo'"
+  res.body.stringWithDQuotes: eq '"foo"'
+  res.body.stringWithCurlyBraces: eq "{foo}"
+  res.body.stringWithDoubleCurlyBraces: eq "{{foobar}}"
+}
+```
+
+```plaintext Number Assertions
+assert {
+  res.body.number: eq 123
+  res.body.numberAsString: eq '123'
+  res.body.numberAsStringWithLeadingZero: eq "0123"
+  res.body.numberBig.toString(): eq '9007199254740992000'
+  res.body.price: gt 0
+  res.body.quantity: gte 1
+  res.body.discount: lte 100
+}
+```
+
+```plaintext Boolean & Null Assertions
+assert {
+  res.body.true: eq true
+  res.body.false: eq false
+  res.body.null: eq null
+  res.body.trueAsString: eq "true"
+  res.body.falseAsString: eq "false"
+  res.body.nullAsString: eq "null"
+}
+```
+
+```plaintext Complex Validations
+assert {
+  res.status: eq 200
+  res.getResponseTime(): lte 2000
+  res.body.user.email: matches ^[^\s@]+@[^\s@]+\.[^\s@]+$
+  res.body.items: isArray
+  res.body.items.length: gte 1
+  res.body.status: in active,pending,completed
+  res.body.error: isUndefined
+}
+```
+</CodeGroup>
+
+## Test Scripts
+
+For complex validations, use test scripts with the full power of JavaScript and Chai assertion library.
+
+### Basic Test Structure
+
+```javascript
+test("test description", function() {
+  // Your assertions here
+  expect(res.getStatus()).to.equal(200);
+  expect(res.getBody()).to.have.property('success', true);
+});
+```
+
+### Chai Assertions
+
+Bruno includes the Chai assertion library with three assertion styles:
+
+<Tabs>
+  <Tab title="Expect (BDD)">
+    ```javascript
+    test("validate response structure", function() {
+      const data = res.getBody();
+      
+      // Equality
+      expect(res.getStatus()).to.equal(200);
+      expect(data.name).to.eql('John Doe');
+      
+      // Type checking
+      expect(data).to.be.an('object');
+      expect(data.items).to.be.an('array');
+      expect(data.count).to.be.a('number');
+      
+      // Properties
+      expect(data).to.have.property('id');
+      expect(data).to.have.property('email', 'user@example.com');
+      expect(data).to.include.keys('id', 'name', 'email');
+      
+      // Arrays
+      expect(data.roles).to.include('user');
+      expect(data.roles).to.have.lengthOf(3);
+      expect(data.items).to.be.empty;
+      
+      // Strings
+      expect(data.message).to.contain('success');
+      expect(data.email).to.match(/^[^\s@]+@/);
+      
+      // Numbers
+      expect(data.age).to.be.above(18);
+      expect(data.score).to.be.within(0, 100);
+      
+      // Negation
+      expect(data.error).to.not.exist;
+      expect(data.deleted).to.be.false;
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Assert (TDD)">
+    ```javascript
+    test("validate using assert style", function() {
+      const data = res.getBody();
+      
+      // Equality
+      assert.equal(res.getStatus(), 200);
+      assert.deepEqual(data.user, { id: 1, name: 'John' });
+      
+      // Type checking
+      assert.isObject(data);
+      assert.isArray(data.items);
+      assert.isNumber(data.count);
+      assert.isString(data.message);
+      assert.isBoolean(data.success);
+      
+      // Truthiness
+      assert.isTrue(data.verified);
+      assert.isFalse(data.deleted);
+      assert.isNull(data.error);
+      assert.isUndefined(data.optional);
+      
+      // Properties
+      assert.property(data, 'id');
+      assert.propertyVal(data, 'status', 'active');
+      
+      // Strings
+      assert.include(data.message, 'success');
+      assert.match(data.email, /^[^\s@]+@/);
+      
+      // Numbers
+      assert.isAbove(data.score, 0);
+      assert.isAtMost(data.percentage, 100);
+    });
+    ```
+  </Tab>
+</Tabs>
+
+### Advanced Validation Patterns
+
+<AccordionGroup>
+  <Accordion title="Deep Object Validation">
+    ```javascript
+    test("validate nested object structure", function() {
+      const data = res.getBody();
+      
+      expect(data).to.have.nested.property('user.profile.email');
+      expect(data).to.have.nested.property('settings.notifications.email', true);
+      
+      // Deep equality
+      expect(data.user).to.deep.include({
+        id: 123,
+        role: 'admin'
+      });
+      
+      // Validate entire structure
+      expect(data).to.deep.equal({
+        success: true,
+        user: {
+          id: 123,
+          name: 'John Doe',
+          email: 'john@example.com'
+        },
+        metadata: {
+          timestamp: data.metadata.timestamp // dynamic value
+        }
+      });
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Array Validation">
+    ```javascript
+    test("validate array contents", function() {
+      const data = res.getBody();
+      
+      // Array length
+      expect(data.items).to.have.lengthOf(10);
+      expect(data.items).to.have.length.above(0);
+      
+      // Array membership
+      expect(data.tags).to.include('javascript');
+      expect(data.tags).to.include.members(['node', 'api']);
+      expect(data.tags).to.have.members(['node', 'api', 'rest']);
+      
+      // Array of objects
+      expect(data.users).to.be.an('array').that.is.not.empty;
+      expect(data.users[0]).to.have.property('id');
+      
+      // Every item matches condition
+      data.items.forEach(item => {
+        expect(item).to.have.property('id');
+        expect(item.id).to.be.a('number');
+      });
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Response Time Validation">
+    ```javascript
+    test("response time is acceptable", function() {
+      const responseTime = res.getResponseTime();
+      
+      expect(responseTime).to.be.below(2000);
+      expect(responseTime).to.be.within(0, 5000);
+    });
+    
+    test("response size is reasonable", function() {
+      const size = res.getSize();
+      
+      expect(size.total).to.be.below(1024 * 1024); // < 1MB
+      expect(size.body).to.be.above(0);
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Header Validation">
+    ```javascript
+    test("validate response headers", function() {
+      const headers = res.getHeaders();
+      
+      expect(headers).to.have.property('content-type');
+      expect(headers['content-type']).to.include('application/json');
+      
+      expect(res.getHeader('x-rate-limit-remaining')).to.be.a('string');
+      
+      const rateLimit = parseInt(res.getHeader('x-rate-limit-remaining'));
+      expect(rateLimit).to.be.at.least(0);
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Schema Validation">
+    ```javascript
+    test("validate JSON schema", function() {
+      const tv4 = require('tv4');
+      const data = res.getBody();
+      
+      const schema = {
+        type: 'object',
+        required: ['id', 'name', 'email'],
+        properties: {
+          id: { type: 'number' },
+          name: { type: 'string', minLength: 1 },
+          email: { type: 'string', format: 'email' },
+          age: { type: 'number', minimum: 0 },
+          roles: {
+            type: 'array',
+            items: { type: 'string' }
+          }
+        }
+      };
+      
+      const valid = tv4.validate(data, schema);
+      expect(valid).to.be.true;
+      
+      if (!valid) {
+        console.error('Schema validation error:', tv4.error);
+      }
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="JWT Token Validation">
+    ```javascript
+    test("validate JWT token", function() {
+      const jwt = require('jsonwebtoken');
+      const token = res.getBody().token;
+      
+      // Decode without verification
+      const decoded = jwt.decode(token);
+      expect(decoded).to.have.property('exp');
+      expect(decoded.exp).to.be.greaterThan(Date.now() / 1000);
+      
+      // Validate claims
+      expect(decoded.userId).to.equal(bru.getVar('expectedUserId'));
+      expect(decoded.role).to.be.oneOf(['user', 'admin']);
+      
+      // Store for later use
+      bru.setVar('authToken', token);
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Async Test Validations
+
+```javascript
+// Make additional requests within tests
+await test("verify created resource", async () => {
+  const createResponse = res.getBody();
+  const resourceId = createResponse.id;
+  
+  // Fetch the created resource
+  const getResponse = await bru.sendRequest({
+    url: `https://api.example.com/resources/${resourceId}`,
+    method: 'GET'
+  });
+  
+  expect(getResponse.status).to.equal(200);
+  expect(getResponse.data.id).to.equal(resourceId);
+  expect(getResponse.data.name).to.equal(createResponse.name);
+});
+```
+
+## Error Handling in Tests
+
+```javascript
+// Test expected errors
+test("should handle 404 gracefully", function() {
+  expect(res.getStatus()).to.equal(404);
+  expect(res.getBody()).to.have.property('error');
+  expect(res.getBody().error).to.include('not found');
+});
+
+// Conditional assertions
+test("conditional validation", function() {
+  const data = res.getBody();
+  
+  if (res.getStatus() === 200) {
+    expect(data).to.have.property('result');
+  } else if (res.getStatus() === 404) {
+    expect(data).to.have.property('error');
+  } else {
+    throw new Error(`Unexpected status: ${res.getStatus()}`);
+  }
+});
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Use Descriptive Test Names">
+    ```javascript
+    // Good
+    test("should return user profile with all required fields", function() { ... });
+    
+    // Bad
+    test("test1", function() { ... });
+    ```
+  </Step>
+  
+  <Step title="Test One Thing Per Assertion">
+    ```javascript
+    // Good - focused tests
+    test("response status is 200", function() {
+      expect(res.getStatus()).to.equal(200);
+    });
+    
+    test("response contains user data", function() {
+      expect(res.getBody()).to.have.property('user');
+    });
+    
+    // Avoid - testing too much
+    test("everything works", function() {
+      expect(res.getStatus()).to.equal(200);
+      expect(res.getBody()).to.have.property('user');
+      expect(res.getBody().user.email).to.be.a('string');
+      // ...
+    });
+    ```
+  </Step>
+  
+  <Step title="Validate Data Types and Structure">
+    ```javascript
+    test("validate response structure", function() {
+      const data = res.getBody();
+      
+      // Check types first
+      expect(data).to.be.an('object');
+      expect(data.items).to.be.an('array');
+      
+      // Then validate values
+      expect(data.success).to.be.true;
+      expect(data.items).to.have.lengthOf.at.least(1);
+    });
+    ```
+  </Step>
+  
+  <Step title="Use Inline Assertions for Simple Checks">
+    ```plaintext
+    # Simple validations - use inline assertions
+    assert {
+      res.status: eq 200
+      res.body.success: eq true
+    }
+    
+    # Complex validations - use test scripts
+    tests {
+      test("validate complex data structure", function() {
+        // Complex validation logic
+      });
+    }
+    ```
+  </Step>
+</Steps>
+
+## Common Patterns
+
+<CardGroup cols={2}>
+  <Card title="Status Code Validation">
+    ```plaintext
+    assert {
+      res.status: eq 200
+      res.status: in 200,201,204
+      res.status: gte 200
+      res.status: lt 300
+    }
+    ```
+  </Card>
+
+  <Card title="Email Validation">
+    ```plaintext
+    assert {
+      res.body.email: matches ^[^\s@]+@[^\s@]+\.[^\s@]+$
+      res.body.email: contains @
+      res.body.email: endsWith @example.com
+    }
+    ```
+  </Card>
+
+  <Card title="Array Validation">
+    ```javascript
+    test("validate array", function() {
+      expect(res.body.items).to.be.an('array');
+      expect(res.body.items).to.not.be.empty;
+      expect(res.body.items[0]).to.have.property('id');
+    });
+    ```
+  </Card>
+
+  <Card title="Performance Checks">
+    ```plaintext
+    assert {
+      res.getResponseTime(): lt 2000
+      res.getResponseTime(): between 0,5000
+    }
+    ```
+  </Card>
+</CardGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Scripting" icon="code" href="/advanced/scripting">
+    Learn advanced scripting techniques
+  </Card>
+  <Card title="Variables" icon="brackets-curly" href="/advanced/variables">
+    Understand variable scopes and usage
+  </Card>
+  <Card title="Workflows" icon="diagram-project" href="/advanced/workflows">
+    Build complex request workflows
+  </Card>
+  <Card title="Testing APIs" icon="flask" href="/desktop/tests">
+    Testing fundamentals and best practices
+  </Card>
+</CardGroup>

@@ -1,0 +1,633 @@
+---
+title: Collection File Format
+description: Specification for collection.bru and environment files
+---
+
+## Overview
+
+Bruno collections are directories containing `.bru` files. Collections can have:
+
+1. **collection.bru** - Collection-level settings and scripts
+2. **folder.bru** - Folder-level metadata files
+3. **Environment files** - Variable definitions for different environments
+
+## Collection Structure
+
+```
+my-collection/
+├── collection.bru          # Collection settings (optional)
+├── environments/
+│   ├── dev.bru            # Development environment
+│   ├── staging.bru        # Staging environment
+│   └── prod.bru           # Production environment
+├── users/
+│   ├── folder.bru         # Folder metadata
+│   ├── get-user.bru       # Individual requests
+│   ├── create-user.bru
+│   └── delete-user.bru
+└── auth/
+    ├── folder.bru
+    ├── login.bru
+    └── logout.bru
+```
+
+## Collection File
+
+The `collection.bru` file defines collection-level settings that apply to all requests.
+
+### Basic Collection
+
+```bru
+headers {
+  x-api-version: 1.0
+  user-agent: Bruno/1.0
+}
+
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{collectionToken}}
+}
+
+vars:pre-request {
+  baseUrl: https://api.example.com
+  apiVersion: v1
+}
+
+script:pre-request {
+  console.log('Collection pre-request script');
+}
+
+script:post-response {
+  console.log('Collection post-response script');
+}
+
+tests {
+  test("Collection-level test", function() {
+    expect(res.getStatus()).to.be.below(500);
+  });
+}
+
+docs {
+  # My API Collection
+  
+  This collection contains all endpoints for the Example API.
+}
+```
+
+### Collection Blocks
+
+<AccordionGroup>
+  <Accordion title="headers" icon="list">
+    Headers applied to all requests in the collection:
+    
+    ```bru
+    headers {
+      x-api-version: 1.0
+      x-client-id: bruno-client
+      accept: application/json
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="auth" icon="shield">
+    Default authentication mode for the collection:
+    
+    ```bru
+    auth {
+      mode: bearer
+    }
+    ```
+    
+    Supported modes: `none`, `basic`, `bearer`, `digest`, `awsv4`, `oauth2`, `wsse`, `apikey`
+  </Accordion>
+
+  <Accordion title="auth:*" icon="key">
+    Authentication credentials for the collection:
+    
+    ```bru
+    auth:bearer {
+      token: {{token}}
+    }
+    
+    auth:basic {
+      username: {{username}}
+      password: {{password}}
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="vars:pre-request" icon="database">
+    Variables set before each request:
+    
+    ```bru
+    vars:pre-request {
+      baseUrl: https://api.example.com
+      timestamp: {{$timestamp}}
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="vars:post-response" icon="arrow-down-to-bracket">
+    Variables extracted after each response:
+    
+    ```bru
+    vars:post-response {
+      lastRequestId: $res.body.requestId
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="script:pre-request" icon="code">
+    Script executed before each request:
+    
+    ```bru
+    script:pre-request {
+      const timestamp = Date.now();
+      bru.setVar('timestamp', timestamp);
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="script:post-response" icon="play">
+    Script executed after each response:
+    
+    ```bru
+    script:post-response {
+      if (res.getStatus() === 401) {
+        console.log('Authentication required');
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="tests" icon="flask">
+    Tests run for all requests:
+    
+    ```bru
+    tests {
+      test("Status should not be 5xx", function() {
+        expect(res.getStatus()).to.be.below(500);
+      });
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="docs" icon="book">
+    Collection documentation:
+    
+    ```bru
+    docs {
+      # API Collection
+      
+      Collection description and usage notes.
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Complete Collection Example
+
+```bru
+headers {
+  accept: application/json
+  x-api-version: 2.0
+  x-client-name: bruno
+}
+
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+vars:pre-request {
+  baseUrl: https://api.example.com
+  apiVersion: v2
+  defaultTimeout: 30000
+}
+
+vars:post-response {
+  lastResponseTime: $res.responseTime
+  lastStatus: $res.status
+}
+
+script:pre-request {
+  const timestamp = Date.now();
+  const requestId = crypto.randomUUID();
+  
+  bru.setVar('timestamp', timestamp);
+  bru.setVar('requestId', requestId);
+  
+  console.log(`[${requestId}] Starting request at ${timestamp}`);
+}
+
+script:post-response {
+  const status = res.getStatus();
+  const time = res.getResponseTime();
+  
+  console.log(`Response: ${status} in ${time}ms`);
+  
+  // Handle token refresh
+  if (status === 401) {
+    console.warn('Authentication token expired');
+  }
+  
+  // Store response metadata
+  bru.setVar('lastResponseStatus', status);
+}
+
+tests {
+  test("Response should be successful", function() {
+    const status = res.getStatus();
+    expect(status).to.be.at.least(200);
+    expect(status).to.be.below(400);
+  });
+  
+  test("Response should be timely", function() {
+    expect(res.getResponseTime()).to.be.below(5000);
+  });
+  
+  test("Content-Type should be JSON", function() {
+    const contentType = res.getHeader('content-type');
+    expect(contentType).to.include('application/json');
+  });
+}
+
+docs {
+  # Example API Collection
+  
+  Complete API collection for Example.com services.
+  
+  ## Authentication
+  All requests require a Bearer token. Set `authToken` in your environment.
+  
+  ## Rate Limiting
+  - 1000 requests per hour per token
+  - 100 requests per minute per token
+  
+  ## Base URL
+  - Production: https://api.example.com
+  - Staging: https://staging-api.example.com
+  - Development: http://localhost:3000
+  
+  ## Support
+  For issues, contact api-support@example.com
+}
+```
+
+## Folder Files
+
+The `folder.bru` file contains metadata for organizing requests within folders.
+
+```bru
+meta {
+  name: User Management
+  seq: 5
+}
+```
+
+<ParamField path="name" type="string" required>
+  Display name for the folder
+</ParamField>
+
+<ParamField path="seq" type="number">
+  Sequence number for ordering folders
+</ParamField>
+
+### Folder Example
+
+```bru
+meta {
+  name: Authentication Endpoints
+  seq: 1
+}
+```
+
+## Environment Files
+
+Environment files define variables for different environments (dev, staging, production).
+
+### Environment File Location
+
+Environment files are stored in the `environments/` directory:
+
+```
+collection/
+└── environments/
+    ├── dev.bru
+    ├── staging.bru
+    ├── prod.bru
+    └── local.bru
+```
+
+### Environment File Format
+
+```bru
+vars {
+  baseUrl: https://api.example.com
+  apiKey: your-api-key-here
+  timeout: 30000
+  debugMode: false
+}
+```
+
+### Environment Variables
+
+<Warning>
+  Do not commit sensitive data like API keys or passwords to version control. Use local environments or secret management.
+</Warning>
+
+### Development Environment
+
+```bru
+vars {
+  baseUrl: http://localhost:3000
+  apiKey: dev-api-key
+  dbHost: localhost
+  dbPort: 5432
+  debugMode: true
+  logLevel: debug
+}
+```
+
+### Staging Environment
+
+```bru
+vars {
+  baseUrl: https://staging-api.example.com
+  apiKey: {{STAGING_API_KEY}}
+  dbHost: staging-db.example.com
+  dbPort: 5432
+  debugMode: true
+  logLevel: info
+}
+```
+
+### Production Environment
+
+```bru
+vars {
+  baseUrl: https://api.example.com
+  apiKey: {{PROD_API_KEY}}
+  dbHost: prod-db.example.com
+  dbPort: 5432
+  debugMode: false
+  logLevel: error
+  enableCaching: true
+  cacheTimeout: 3600
+}
+```
+
+## Variable Precedence
+
+Variables are resolved in the following order (highest to lowest priority):
+
+1. **Request variables** - Set in `vars:pre-request` within the request
+2. **Environment variables** - Set in the active environment file
+3. **Collection variables** - Set in `collection.bru`
+4. **Built-in variables** - System variables like `{{$uuid}}`
+
+<Info>
+  Request-level variables override environment and collection variables.
+</Info>
+
+## Variable Syntax
+
+### Enabling/Disabling Variables
+
+```bru
+vars {
+  enabled_var: value
+  ~disabled_var: value
+}
+```
+
+Disabled variables (prefixed with `~`) are not applied.
+
+### Local Variables
+
+Variables prefixed with `@` are local and not persisted:
+
+```bru
+vars:pre-request {
+  apiKey: {{API_KEY}}
+  @temporaryToken: generated-token
+}
+```
+
+### Referencing Environment Variables
+
+```bru
+vars {
+  apiUrl: https://{{API_HOST}}/api
+  secretKey: {{SECRET_KEY}}
+}
+```
+
+Environment variables in `{{}}` are resolved from:
+- Process environment variables
+- `.env` files
+- System environment
+
+## OAuth 2.0 Configuration
+
+Collections can define OAuth 2.0 authentication with additional parameters:
+
+### OAuth 2.0 Authorization Request
+
+```bru
+auth:oauth2:additional_params:auth_req:headers {
+  x-custom-header: value
+}
+
+auth:oauth2:additional_params:auth_req:queryparams {
+  custom_param: value
+}
+```
+
+### OAuth 2.0 Access Token Request
+
+```bru
+auth:oauth2:additional_params:access_token_req:headers {
+  x-tenant-id: {{tenantId}}
+}
+
+auth:oauth2:additional_params:access_token_req:queryparams {
+  scope: extended
+}
+
+auth:oauth2:additional_params:access_token_req:body {
+  custom_claim: value
+}
+```
+
+### OAuth 2.0 Refresh Token Request
+
+```bru
+auth:oauth2:additional_params:refresh_token_req:headers {
+  x-refresh-source: bruno
+}
+
+auth:oauth2:additional_params:refresh_token_req:queryparams {
+  grant_type: refresh_token
+}
+
+auth:oauth2:additional_params:refresh_token_req:body {
+  client_info: bruno-client
+}
+```
+
+## Complete Collection Setup
+
+### Directory Structure
+
+```
+api-collection/
+├── collection.bru
+├── environments/
+│   ├── dev.bru
+│   ├── staging.bru
+│   └── prod.bru
+├── auth/
+│   ├── folder.bru
+│   ├── login.bru
+│   ├── logout.bru
+│   └── refresh-token.bru
+├── users/
+│   ├── folder.bru
+│   ├── list-users.bru
+│   ├── get-user.bru
+│   ├── create-user.bru
+│   ├── update-user.bru
+│   └── delete-user.bru
+└── posts/
+    ├── folder.bru
+    ├── list-posts.bru
+    ├── get-post.bru
+    ├── create-post.bru
+    └── delete-post.bru
+```
+
+### collection.bru
+
+```bru
+headers {
+  accept: application/json
+  content-type: application/json
+  user-agent: Bruno API Client
+}
+
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+vars:pre-request {
+  requestId: {{$uuid}}
+  timestamp: {{$timestamp}}
+}
+
+script:pre-request {
+  const env = bru.getEnvName();
+  console.log(`Running in ${env} environment`);
+}
+
+tests {
+  test("Status should be valid", function() {
+    expect(res.getStatus()).to.be.at.least(200);
+  });
+}
+```
+
+### environments/dev.bru
+
+```bru
+vars {
+  baseUrl: http://localhost:3000
+  authToken: dev-token-12345
+  apiKey: dev-api-key
+  debugMode: true
+}
+```
+
+### environments/prod.bru
+
+```bru
+vars {
+  baseUrl: https://api.example.com
+  authToken: {{PROD_AUTH_TOKEN}}
+  apiKey: {{PROD_API_KEY}}
+  debugMode: false
+}
+```
+
+### auth/folder.bru
+
+```bru
+meta {
+  name: Authentication
+  seq: 1
+}
+```
+
+### users/folder.bru
+
+```bru
+meta {
+  name: User Management
+  seq: 2
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Environments" icon="layer-group">
+    Create separate environments for dev, staging, and production with appropriate base URLs and credentials.
+  </Card>
+  
+  <Card title="Secure Secrets" icon="lock">
+    Never commit sensitive data. Use environment variable references like `{{SECRET_KEY}}` and `.env` files.
+  </Card>
+  
+  <Card title="Collection Scripts" icon="code">
+    Use collection-level scripts for common logic like authentication, logging, and error handling.
+  </Card>
+  
+  <Card title="Organize Folders" icon="folder-tree">
+    Group related requests in folders with descriptive names and sequence numbers.
+  </Card>
+</CardGroup>
+
+## Tips
+
+<Tip>
+  Use collection-level headers for common headers like `accept`, `user-agent`, and API versioning.
+</Tip>
+
+<Tip>
+  Set base URLs in environment variables to easily switch between environments.
+</Tip>
+
+<Tip>
+  Use collection-level tests to validate common requirements like response times and status codes.
+</Tip>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Bru Syntax" icon="code" href="/api/bru-syntax">
+    Complete Bru language syntax reference
+  </Card>
+  <Card title="Request Format" icon="file-code" href="/api/request-format">
+    Request file format specification
+  </Card>
+</CardGroup>

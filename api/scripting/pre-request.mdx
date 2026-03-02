@@ -1,0 +1,428 @@
+---
+title: Pre-request Scripts
+description: API reference for pre-request scripts that run before HTTP requests
+---
+
+Pre-request scripts execute before the HTTP request is sent, allowing you to modify the request, set variables, or perform setup logic.
+
+## Available Objects
+
+In pre-request scripts, you have access to:
+
+- `bru` - Main Bruno API object
+- `req` - Request object
+- `test` - Test function (can run tests in pre-request scripts)
+- `expect` / `assert` - Chai assertion libraries
+- `console` - Logging functions
+
+<Note>
+The `res` (response) object is **not available** in pre-request scripts since the request hasn't been sent yet.
+</Note>
+
+## Request Object (req)
+
+The `req` object represents the outgoing HTTP request.
+
+### Properties
+
+<ResponseField name="req.url" type="string">
+  The request URL
+</ResponseField>
+
+<ResponseField name="req.method" type="string">
+  HTTP method (GET, POST, PUT, DELETE, etc.)
+</ResponseField>
+
+<ResponseField name="req.headers" type="object">
+  Request headers as key-value pairs
+</ResponseField>
+
+<ResponseField name="req.body" type="any">
+  Request body (automatically parsed if JSON)
+</ResponseField>
+
+<ResponseField name="req.timeout" type="number">
+  Request timeout in milliseconds
+</ResponseField>
+
+<ResponseField name="req.name" type="string">
+  Name of the request
+</ResponseField>
+
+<ResponseField name="req.pathParams" type="array">
+  Path parameters array
+</ResponseField>
+
+<ResponseField name="req.tags" type="array">
+  Tags associated with the request
+</ResponseField>
+
+### Methods
+
+#### URL Methods
+
+<ParamField path="req.getUrl()" type="function">
+  Returns the full request URL
+  
+  ```javascript
+  const url = req.getUrl();
+  console.log('Sending request to:', url);
+  ```
+</ParamField>
+
+<ParamField path="req.setUrl(url)" type="function">
+  Sets the request URL
+  
+  **Parameters:**
+  - `url` (string) - The new URL
+  
+  ```javascript
+  req.setUrl('https://api.example.com/v2/users');
+  ```
+</ParamField>
+
+<ParamField path="req.getHost()" type="function">
+  Returns the host from the URL (including port)
+  
+  ```javascript
+  const host = req.getHost();
+  // Returns: "api.example.com:443"
+  ```
+</ParamField>
+
+<ParamField path="req.getPath()" type="function">
+  Returns the path portion of the URL (with path params interpolated)
+  
+  ```javascript
+  const path = req.getPath();
+  // Returns: "/api/users/123"
+  ```
+</ParamField>
+
+<ParamField path="req.getQueryString()" type="function">
+  Returns the query string without the leading `?`
+  
+  ```javascript
+  const query = req.getQueryString();
+  // Returns: "page=1&limit=10"
+  ```
+</ParamField>
+
+#### Header Methods
+
+<ParamField path="req.getHeader(name)" type="function">
+  Gets a specific header value
+  
+  **Parameters:**
+  - `name` (string) - Header name
+  
+  ```javascript
+  const authHeader = req.getHeader('Authorization');
+  ```
+</ParamField>
+
+<ParamField path="req.setHeader(name, value)" type="function">
+  Sets a header value
+  
+  **Parameters:**
+  - `name` (string) - Header name
+  - `value` (string) - Header value
+  
+  ```javascript
+  req.setHeader('Authorization', 'Bearer ' + token);
+  req.setHeader('Content-Type', 'application/json');
+  ```
+</ParamField>
+
+<ParamField path="req.deleteHeader(name)" type="function">
+  Removes a header
+  
+  **Parameters:**
+  - `name` (string) - Header name
+  
+  ```javascript
+  req.deleteHeader('X-Debug');
+  ```
+</ParamField>
+
+<ParamField path="req.getHeaders()" type="function">
+  Returns all headers as an object
+  
+  ```javascript
+  const headers = req.getHeaders();
+  console.log('All headers:', headers);
+  ```
+</ParamField>
+
+<ParamField path="req.setHeaders(headers)" type="function">
+  Replaces all headers
+  
+  **Parameters:**
+  - `headers` (object) - New headers object
+  
+  ```javascript
+  req.setHeaders({
+    'Authorization': 'Bearer token',
+    'Content-Type': 'application/json'
+  });
+  ```
+</ParamField>
+
+<ParamField path="req.deleteHeaders(names)" type="function">
+  Removes multiple headers
+  
+  **Parameters:**
+  - `names` (array) - Array of header names
+  
+  ```javascript
+  req.deleteHeaders(['X-Debug', 'X-Test']);
+  ```
+</ParamField>
+
+#### Body Methods
+
+<ParamField path="req.getBody(options)" type="function">
+  Gets the request body
+  
+  **Parameters:**
+  - `options.raw` (boolean) - If true, returns raw string instead of parsed JSON
+  
+  ```javascript
+  // Get parsed body (if JSON)
+  const body = req.getBody();
+  
+  // Get raw body string
+  const rawBody = req.getBody({ raw: true });
+  ```
+</ParamField>
+
+<ParamField path="req.setBody(data, options)" type="function">
+  Sets the request body
+  
+  **Parameters:**
+  - `data` (any) - Body data (object will be stringified if JSON content type)
+  - `options.raw` (boolean) - If true, sets raw data without JSON processing
+  
+  ```javascript
+  // Set JSON body (auto-stringified)
+  req.setBody({
+    username: 'john',
+    email: 'john@example.com'
+  });
+  
+  // Set raw body
+  req.setBody('raw data', { raw: true });
+  ```
+</ParamField>
+
+#### Other Methods
+
+<ParamField path="req.getMethod()" type="function">
+  Returns the HTTP method
+  
+  ```javascript
+  const method = req.getMethod();
+  // Returns: "POST"
+  ```
+</ParamField>
+
+<ParamField path="req.setMethod(method)" type="function">
+  Sets the HTTP method
+  
+  **Parameters:**
+  - `method` (string) - HTTP method (GET, POST, etc.)
+  
+  ```javascript
+  req.setMethod('PUT');
+  ```
+</ParamField>
+
+<ParamField path="req.getTimeout()" type="function">
+  Returns the request timeout in milliseconds
+</ParamField>
+
+<ParamField path="req.setTimeout(timeout)" type="function">
+  Sets the request timeout
+  
+  **Parameters:**
+  - `timeout` (number) - Timeout in milliseconds
+  
+  ```javascript
+  req.setTimeout(30000); // 30 seconds
+  ```
+</ParamField>
+
+<ParamField path="req.setMaxRedirects(max)" type="function">
+  Sets the maximum number of redirects to follow
+  
+  **Parameters:**
+  - `max` (number) - Maximum redirects
+  
+  ```javascript
+  req.setMaxRedirects(5);
+  ```
+</ParamField>
+
+<ParamField path="req.getAuthMode()" type="function">
+  Returns the authentication mode in use
+  
+  Returns: `'none'`, `'basic'`, `'bearer'`, `'oauth2'`, `'awsv4'`, `'digest'`, or `'wsse'`
+  
+  ```javascript
+  const authMode = req.getAuthMode();
+  if (authMode === 'bearer') {
+    console.log('Using bearer authentication');
+  }
+  ```
+</ParamField>
+
+<ParamField path="req.getName()" type="function">
+  Returns the request name
+</ParamField>
+
+<ParamField path="req.getPathParams()" type="function">
+  Returns array of path parameters
+  
+  ```javascript
+  const params = req.getPathParams();
+  // Returns: [{name: 'id', value: '123', type: 'path'}]
+  ```
+</ParamField>
+
+<ParamField path="req.getTags()" type="function">
+  Returns array of request tags
+</ParamField>
+
+<ParamField path="req.getExecutionMode()" type="function">
+  Returns the execution mode (e.g., 'cli', 'gui')
+</ParamField>
+
+<ParamField path="req.onFail(callback)" type="function">
+  Registers a callback to run if the request fails
+  
+  **Parameters:**
+  - `callback` (function) - Function to call on failure
+  
+  ```javascript
+  req.onFail(() => {
+    console.log('Request failed!');
+    bru.setEnvVar('last_error', 'Request failed');
+  });
+  ```
+</ParamField>
+
+<ParamField path="req.disableParsingResponseJson()" type="function">
+  Disables automatic JSON parsing of the response body
+  
+  ```javascript
+  // Keep response as raw string
+  req.disableParsingResponseJson();
+  ```
+</ParamField>
+
+## Bruno Object (bru)
+
+The `bru` object provides methods for managing variables, environment, and request flow. See the [Post-response Scripts](/api/scripting/post-response) page for complete `bru` API reference, as all methods are available in both contexts.
+
+Key methods commonly used in pre-request scripts:
+
+```javascript
+// Variables
+bru.setVar('key', 'value');
+const value = bru.getVar('key');
+
+// Environment variables
+bru.setEnvVar('api_token', token);
+const token = bru.getEnvVar('api_token');
+
+// Request flow control
+bru.runner.skipRequest(); // Skip this request
+bru.setNextRequest('request-name'); // Set next request to run
+```
+
+## Common Patterns
+
+### Authentication
+
+```javascript
+script:pre-request {
+  // Basic Auth
+  const username = bru.getEnvVar('username');
+  const password = bru.getEnvVar('password');
+  const encoded = require('btoa')(`${username}:${password}`);
+  req.setHeader('Authorization', `Basic ${encoded}`);
+  
+  // Bearer Token
+  const token = bru.getEnvVar('access_token');
+  req.setHeader('Authorization', `Bearer ${token}`);
+}
+```
+
+### Dynamic Request Body
+
+```javascript
+script:pre-request {
+  const body = req.getBody();
+  
+  // Add timestamp
+  body.timestamp = Date.now();
+  
+  // Add request ID
+  body.requestId = bru.getVar('request_counter') || 1;
+  bru.setVar('request_counter', body.requestId + 1);
+  
+  // Add signature
+  const CryptoJS = require('crypto-js');
+  const secret = bru.getEnvVar('api_secret');
+  body.signature = CryptoJS.HmacSHA256(
+    JSON.stringify(body), 
+    secret
+  ).toString();
+  
+  req.setBody(body);
+}
+```
+
+### Conditional Logic
+
+```javascript
+script:pre-request {
+  const env = bru.getEnvName();
+  
+  if (env === 'production') {
+    // Use production endpoint
+    req.setUrl('https://api.example.com/v1/users');
+  } else {
+    // Use staging endpoint
+    req.setUrl('https://staging.example.com/v1/users');
+  }
+}
+```
+
+### URL Manipulation
+
+```javascript
+script:pre-request {
+  // Get current URL
+  const url = req.getUrl();
+  
+  // Parse and modify
+  const urlObj = new URL(url);
+  urlObj.searchParams.set('api_key', bru.getEnvVar('api_key'));
+  urlObj.searchParams.set('timestamp', Date.now());
+  
+  // Update request
+  req.setUrl(urlObj.toString());
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Post-response Scripts" icon="arrow-left" href="/api/scripting/post-response">
+    Process responses and extract data
+  </Card>
+  <Card title="Test API" icon="vial" href="/api/scripting/test-api">
+    Write test assertions
+  </Card>
+</CardGroup>

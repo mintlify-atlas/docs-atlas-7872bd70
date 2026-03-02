@@ -1,0 +1,344 @@
+---
+title: Creating Requests
+description: Learn how to create, configure, and organize API requests in the Bruno desktop application
+---
+
+Bruno provides multiple ways to create and manage API requests. This guide covers everything from basic request creation to advanced organization techniques.
+
+## Creating a New Request
+
+There are several ways to create a new request in Bruno:
+
+### From the Sidebar
+
+<Steps>
+  <Step title="Right-click on a Collection or Folder">
+    In the sidebar, right-click on the collection or folder where you want to create the request.
+  </Step>
+  <Step title="Select 'New Request'">
+    Choose "New Request" from the context menu. You can also use the keyboard shortcut **Cmd/Ctrl + N**.
+  </Step>
+  <Step title="Enter Request Details">
+    Provide a name for your request and select the request type (HTTP, GraphQL, gRPC, or WebSocket).
+  </Step>
+</Steps>
+
+### From the Collection Actions
+
+Click the three-dot menu (`IconDots`) next to any folder and select "New Request" to create a request in that folder.
+
+### Quick Request Creation
+
+Use the `CreateUntitledRequest` component to quickly create a temporary request for testing:
+
+<Info>
+  Untitled requests are transient and won't be saved until you explicitly save them using **Cmd/Ctrl + S**.
+</Info>
+
+## Request Components
+
+Each request in Bruno consists of several configurable components accessible through tabs in the `HttpRequestPane`:
+
+### Query URL
+
+The `QueryUrl` component allows you to configure your endpoint:
+
+<CodeGroup>
+```text Simple URL
+https://api.example.com/users
+```
+
+```text With Variables
+{{api_url}}/users/{{user_id}}
+```
+
+```text With Query Params
+https://api.example.com/search?q=bruno&limit=10
+```
+</CodeGroup>
+
+<Tip>
+  Use double curly braces `{{variable_name}}` to reference environment variables or collection variables.
+</Tip>
+
+### HTTP Methods
+
+Bruno supports all standard HTTP methods:
+
+- **GET**: Retrieve resources
+- **POST**: Create new resources
+- **PUT**: Update entire resources
+- **PATCH**: Partially update resources
+- **DELETE**: Remove resources
+- **HEAD**: Retrieve headers only
+- **OPTIONS**: Get supported methods
+
+## Request Tabs
+
+The `HttpRequestPane` component provides organized tabs for request configuration:
+
+### Params Tab
+
+Configure query parameters using the `QueryParams` component:
+
+<ParamField path="key" type="string">
+  Parameter name (e.g., `page`, `limit`, `filter`)
+</ParamField>
+
+<ParamField path="value" type="string">
+  Parameter value. Supports variable interpolation with `{{variable}}`.
+</ParamField>
+
+<ParamField path="enabled" type="boolean" default={true}>
+  Toggle to enable/disable individual parameters without deleting them.
+</ParamField>
+
+**Example:**
+
+| Key      | Value              | Enabled |
+|----------|--------------------|---------|
+| page     | 1                  | ✓       |
+| limit    | {{page_size}}      | ✓       |
+| sort     | created_at         | ✗       |
+
+### Body Tab
+
+The `RequestBody` component supports multiple body types:
+
+<Tabs>
+  <Tab title="JSON">
+    ```json
+    {
+      "name": "{{user_name}}",
+      "email": "user@example.com",
+      "role": "admin"
+    }
+    ```
+    Uses CodeMirror with `application/ld+json` mode for syntax highlighting.
+  </Tab>
+  <Tab title="XML">
+    ```xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <user>
+      <name>{{user_name}}</name>
+      <email>user@example.com</email>
+    </user>
+    ```
+    Uses CodeMirror with `application/xml` mode.
+  </Tab>
+  <Tab title="Form URL Encoded">
+    Managed by the `FormUrlEncodedParams` component:
+    
+    | Key      | Value              |
+    |----------|--------------------|
+    | username | {{username}}       |
+    | password | {{password}}       |
+    | grant_type | password         |
+  </Tab>
+  <Tab title="Multipart Form">
+    Managed by the `MultipartFormParams` component. Supports file uploads.
+  </Tab>
+  <Tab title="Text">
+    Plain text body with `application/text` mode.
+  </Tab>
+  <Tab title="File">
+    Upload a file directly using the `FileBody` component.
+  </Tab>
+</Tabs>
+
+### Headers Tab
+
+Configure HTTP headers using the `RequestHeaders` component:
+
+```text Example Headers
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+X-API-Key: {{api_key}}
+User-Agent: Bruno/1.0
+```
+
+<Note>
+  Headers configured at the collection or folder level are inherited by child requests. You can override them at the request level.
+</Note>
+
+### Other Tabs
+
+The request pane includes additional tabs for advanced configuration:
+
+- **Auth**: Authentication configuration (see [Authentication](/desktop/authentication))
+- **Vars**: Request and response variables (see `Vars` component)
+- **Script**: Pre-request and post-response scripts (see [Scripts](/desktop/scripts))
+- **Assert**: Inline assertions using the `Assertions` component
+- **Tests**: JavaScript test suite (see [Tests](/desktop/tests))
+- **Docs**: Markdown documentation for the request
+- **Settings**: Request-specific settings and tags
+
+## Organizing Requests
+
+### Folders
+
+Organize related requests using folders:
+
+<Steps>
+  <Step title="Create a Folder">
+    Right-click a collection, select "New Folder", and name it (e.g., "Authentication", "Users", "Posts").
+  </Step>
+  <Step title="Nest Folders">
+    Folders can be nested to create hierarchical structures. The `CollectionItem` component handles rendering with proper indentation.
+  </Step>
+  <Step title="Inherit Settings">
+    Configure auth, headers, scripts, and variables at the folder level to apply them to all child requests.
+  </Step>
+</Steps>
+
+### Drag and Drop
+
+The `CollectionItem` component supports drag-and-drop:
+
+- Drag requests between folders
+- Reorder requests within a folder
+- Move requests to different collections
+
+<Info>
+  Bruno uses React DnD for drag-and-drop functionality. Items can be dropped "adjacent" (before/after) or "inside" folders.
+</Info>
+
+### Sequence Ordering
+
+Requests are automatically assigned a `seq` (sequence) number for ordering. The sidebar uses `sortByNameThenSequence()` to display items.
+
+## Request Examples
+
+For HTTP requests, you can create response examples to document different scenarios:
+
+<Steps>
+  <Step title="Create Example">
+    Right-click a request and select "Create Example". This uses the `CreateExampleModal` component.
+  </Step>
+  <Step title="Configure Example">
+    Provide a name, description, and configure the expected response (status, headers, body).
+  </Step>
+  <Step title="View Examples">
+    Examples appear as collapsible items under the request in the sidebar, rendered by `ExampleItem` component.
+  </Step>
+</Steps>
+
+```bru Example in .bru file
+meta {
+  name: Get User
+  type: http
+}
+
+get {
+  url: {{api_url}}/users/{{user_id}}
+}
+
+example:success {
+  status: 200
+  body: {
+    "id": 123,
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
+}
+
+example:not-found {
+  status: 404
+  body: {
+    "error": "User not found"
+  }
+}
+```
+
+## Saving Requests
+
+<CodeGroup>
+```text Keyboard Shortcut
+Cmd/Ctrl + S
+```
+
+```text Menu Action
+File → Save Request
+```
+
+```text Auto-Save
+Bruno auto-saves draft changes to Redux state.
+Use Cmd/Ctrl + S to persist to the .bru file.
+```
+</CodeGroup>
+
+The `saveRequest` action in `providers/ReduxStore/slices/collections/actions` handles saving requests to the filesystem.
+
+## Cloning Requests
+
+Duplicate requests to create variations:
+
+<Steps>
+  <Step title="Right-click Request">
+    Right-click the request you want to clone in the sidebar.
+  </Step>
+  <Step title="Select 'Clone'">
+    The `CloneCollectionItem` modal will open, allowing you to name the cloned request.
+  </Step>
+  <Step title="Edit Clone">
+    Modify the cloned request as needed. All configuration is copied from the original.
+  </Step>
+</Steps>
+
+## Running Requests
+
+Send requests using multiple methods:
+
+<Tabs>
+  <Tab title="Send Button">
+    Click the "Send" button in the request pane.
+  </Tab>
+  <Tab title="Keyboard Shortcut">
+    Press **Cmd/Ctrl + Enter** to send the request.
+  </Tab>
+  <Tab title="Context Menu">
+    Right-click a request in the sidebar and select "Run".
+  </Tab>
+  <Tab title="Folder Run">
+    Right-click a folder and select "Run" to execute all requests in sequence using the `RunCollectionItem` component.
+  </Tab>
+</Tabs>
+
+The `sendRequest` action uses the Axios HTTP client to execute requests and displays results in the `ResponsePane`.
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Descriptive Names">
+    Name requests clearly (e.g., "Create User", "Get Orders by Date") to make collections self-documenting.
+  </Accordion>
+  <Accordion title="Organize by Feature">
+    Group related requests in folders by feature or API resource (e.g., "Users", "Products", "Orders").
+  </Accordion>
+  <Accordion title="Leverage Inheritance">
+    Configure common auth, headers, and scripts at the collection or folder level to avoid duplication.
+  </Accordion>
+  <Accordion title="Use Variables">
+    Parameterize URLs, tokens, and values using `{{variables}}` for flexibility across environments.
+  </Accordion>
+  <Accordion title="Document with Examples">
+    Create response examples to document expected API behavior for different scenarios.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Request Types" icon="layer-group" href="/desktop/request-types">
+    Learn about REST, GraphQL, gRPC, and WebSocket requests
+  </Card>
+  <Card title="Authentication" icon="key" href="/desktop/authentication">
+    Configure authentication methods for your requests
+  </Card>
+  <Card title="Scripts" icon="code" href="/desktop/scripts">
+    Automate workflows with pre-request and post-response scripts
+  </Card>
+  <Card title="Tests" icon="vial" href="/desktop/tests">
+    Write test assertions to validate API responses
+  </Card>
+</CardGroup>

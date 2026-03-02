@@ -1,0 +1,533 @@
+---
+title: Version Control with Git
+description: Collaborate on API collections using Git and any version control system
+---
+
+## Overview
+
+Bruno stores collections as plain text files directly on your filesystem, making it perfect for version control. Unlike cloud-based API tools, Bruno uses Git-friendly formats that enable true collaboration through pull requests, branches, and code reviews.
+
+## File Structure
+
+Bruno collections are organized in a simple directory structure:
+
+```
+my-api-collection/
+├── bruno.json              # Collection configuration
+├── environments/           # Environment variables
+│   ├── Development.bru
+│   ├── Staging.bru
+│   └── Production.bru
+├── auth/                   # Requests organized by folder
+│   ├── login.bru
+│   └── refresh-token.bru
+├── users/
+│   ├── create-user.bru
+│   ├── get-user.bru
+│   └── folder.bru         # Folder-level configuration
+└── collection.bru         # Collection-level scripts
+```
+
+### Collection Configuration
+
+The `bruno.json` file contains collection settings:
+
+```json bruno.json
+{
+  "version": "1",
+  "name": "bruno-testbench",
+  "type": "collection",
+  "scripts": {
+    "moduleWhitelist": ["crypto", "buffer", "form-data"],
+    "additionalContextRoots": ["../additional-context-root-lib"]
+  },
+  "clientCertificates": {
+    "enabled": true,
+    "certs": []
+  },
+  "presets": {
+    "requestType": "http",
+    "requestUrl": "http://localhost:6000"
+  }
+}
+```
+
+### Request Files
+
+Each request is stored as a `.bru` file using plain text markup:
+
+```bru ping.bru
+meta {
+  name: ping
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/ping
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  bru.runner.stopExecution();
+}
+```
+
+### Environment Files
+
+Environment variables are stored in `.bru` files:
+
+```bru environments/Prod.bru
+vars {
+  host: https://testbench-sanity.usebruno.com
+  localhost: http://localhost:8081
+  bearer_auth_token: your_secret_token
+  basic_auth_password: della
+  env.var1: envVar1
+  foo: bar
+  echo-host: https://echo.usebruno.com
+}
+```
+
+## Git Workflow
+
+<Steps>
+  <Step title="Initialize Git repository">
+    Create a new Git repository for your collection:
+    
+    ```bash
+    cd my-api-collection
+    git init
+    git add .
+    git commit -m "Initial API collection"
+    ```
+  </Step>
+
+  <Step title="Create a .gitignore file">
+    Add files you want to exclude:
+    
+    ```text .gitignore
+    # Environment-specific secrets
+    environments/Local.bru
+    
+    # OS files
+    .DS_Store
+    Thumbs.db
+    
+    # IDE files
+    .vscode/
+    .idea/
+    ```
+  </Step>
+
+  <Step title="Push to remote repository">
+    Add a remote and push:
+    
+    ```bash
+    git remote add origin https://github.com/username/api-collection.git
+    git branch -M main
+    git push -u origin main
+    ```
+  </Step>
+</Steps>
+
+## Collaboration Workflows
+
+### Feature Branch Workflow
+
+<Steps>
+  <Step title="Create a feature branch">
+    ```bash
+    git checkout -b feature/add-payment-endpoints
+    ```
+  </Step>
+
+  <Step title="Add new requests">
+    Create new `.bru` files in Bruno and organize them:
+    
+    ```
+    payments/
+    ├── create-payment.bru
+    ├── get-payment.bru
+    └── refund-payment.bru
+    ```
+  </Step>
+
+  <Step title="Commit your changes">
+    ```bash
+    git add payments/
+    git commit -m "Add payment API endpoints"
+    ```
+  </Step>
+
+  <Step title="Push and create pull request">
+    ```bash
+    git push -u origin feature/add-payment-endpoints
+    ```
+    
+    Then create a PR on GitHub/GitLab for review.
+  </Step>
+</Steps>
+
+### Team Collaboration
+
+<CardGroup cols={2}>
+  <Card title="Clone Collection" icon="code-branch">
+    Team members can clone and start working:
+    
+    ```bash
+    git clone https://github.com/team/api-collection.git
+    cd api-collection
+    ```
+    
+    Open the folder in Bruno to start testing.
+  </Card>
+  
+  <Card title="Pull Latest Changes" icon="arrow-down">
+    Stay in sync with team updates:
+    
+    ```bash
+    git pull origin main
+    ```
+    
+    Bruno will automatically reflect the changes.
+  </Card>
+  
+  <Card title="Review Changes" icon="eye">
+    Review API changes in pull requests:
+    
+    - See exactly what requests changed
+    - Review test scripts and assertions
+    - Check environment variable updates
+  </Card>
+  
+  <Card title="Resolve Conflicts" icon="code-merge">
+    Merge conflicts are easy to resolve since `.bru` files are plain text:
+    
+    ```bash
+    git mergetool
+    ```
+  </Card>
+</CardGroup>
+
+## Branch Strategies
+
+### Gitflow for API Collections
+
+```mermaid
+gitflow
+  main --> develop
+  develop --> feature/user-api
+  develop --> feature/auth-api
+  feature/user-api --> develop
+  develop --> release/v1.0
+  release/v1.0 --> main
+  main --> hotfix/auth-bug
+  hotfix/auth-bug --> main
+```
+
+<Tabs>
+  <Tab title="Main Branch">
+    - Production-ready API tests
+    - Only merge from release branches
+    - Protected branch with required reviews
+    
+    ```bash
+    git checkout main
+    git merge release/v1.0
+    git tag v1.0.0
+    ```
+  </Tab>
+  
+  <Tab title="Develop Branch">
+    - Integration branch for features
+    - Continuous testing against staging
+    
+    ```bash
+    git checkout develop
+    git merge feature/user-api
+    ```
+  </Tab>
+  
+  <Tab title="Feature Branches">
+    - Individual API endpoint development
+    - One branch per feature/endpoint group
+    
+    ```bash
+    git checkout -b feature/payment-integration
+    # Add payment requests
+    git commit -m "Add payment endpoints with tests"
+    ```
+  </Tab>
+  
+  <Tab title="Release Branches">
+    - Prepare for production release
+    - Update environment variables
+    
+    ```bash
+    git checkout -b release/v1.1
+    # Update production endpoints
+    git commit -m "Prepare v1.1 release"
+    ```
+  </Tab>
+</Tabs>
+
+## Managing Secrets
+
+<Warning>
+  Never commit sensitive data to version control!
+</Warning>
+
+### Using Environment-Specific Files
+
+Create separate environment files and exclude secrets:
+
+```text .gitignore
+# Exclude local development secrets
+environments/Local.bru
+environments/.env.local
+
+# Exclude any files with secrets
+**/secrets.bru
+**/*.secret.bru
+```
+
+### Environment Variable Templates
+
+Commit template files instead:
+
+```bru environments/Production.bru.template
+vars {
+  host: https://api.production.com
+  api_key: ${API_KEY}  # Set in CI/CD
+  auth_token: ${AUTH_TOKEN}  # Set in CI/CD
+}
+```
+
+Team members copy and fill in their own values:
+
+```bash
+cp environments/Production.bru.template environments/Local.bru
+# Edit Local.bru with actual secrets
+```
+
+### Using Process Environment Variables
+
+Reference system environment variables in Bruno:
+
+```bru environments/Prod.bru
+vars {
+  host: https://api.production.com
+  api_key: {{process.env.API_KEY}}
+  db_password: {{process.env.DB_PASSWORD}}
+}
+```
+
+Set them in your shell or CI/CD:
+
+```bash
+export API_KEY="secret123"
+export DB_PASSWORD="dbpass456"
+bru run --env Prod
+```
+
+## Git Best Practices
+
+<AccordionGroup>
+  <Accordion title="Write descriptive commit messages">
+    Follow conventional commit format:
+    
+    ```bash
+    git commit -m "feat: add user authentication endpoints"
+    git commit -m "fix: correct OAuth2 token refresh logic"
+    git commit -m "test: add assertions for error responses"
+    git commit -m "docs: update API endpoint documentation"
+    ```
+  </Accordion>
+  
+  <Accordion title="Keep commits focused">
+    Each commit should represent a single logical change:
+    
+    ```bash
+    # Good: One feature per commit
+    git add users/create-user.bru
+    git commit -m "Add create user endpoint"
+    
+    git add users/delete-user.bru
+    git commit -m "Add delete user endpoint"
+    
+    # Avoid: Multiple unrelated changes
+    git add users/*.bru payments/*.bru
+    git commit -m "Add stuff"
+    ```
+  </Accordion>
+  
+  <Accordion title="Use branch protection rules">
+    Protect important branches on GitHub/GitLab:
+    
+    - Require pull request reviews
+    - Require status checks (CI tests) to pass
+    - Require branches to be up to date
+    - Restrict who can push
+  </Accordion>
+  
+  <Accordion title="Tag releases">
+    Tag important versions:
+    
+    ```bash
+    git tag -a v1.0.0 -m "Release version 1.0.0"
+    git push origin v1.0.0
+    ```
+  </Accordion>
+  
+  <Accordion title="Clean up old branches">
+    Delete merged feature branches:
+    
+    ```bash
+    git branch -d feature/user-api
+    git push origin --delete feature/user-api
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Monorepo vs Multi-repo
+
+<Tabs>
+  <Tab title="Monorepo Approach">
+    Keep all API collections in one repository:
+    
+    ```
+    api-collections/
+    ├── user-service/
+    │   ├── bruno.json
+    │   └── requests/
+    ├── payment-service/
+    │   ├── bruno.json
+    │   └── requests/
+    └── auth-service/
+        ├── bruno.json
+        └── requests/
+    ```
+    
+    **Pros:**
+    - Single source of truth
+    - Easy to share environments
+    - Simpler dependency management
+    
+    **Cons:**
+    - Larger repository size
+    - Requires discipline for organization
+  </Tab>
+  
+  <Tab title="Multi-repo Approach">
+    Separate repository per service:
+    
+    ```
+    user-service-api/
+    ├── bruno.json
+    └── requests/
+    
+    payment-service-api/
+    ├── bruno.json
+    └── requests/
+    ```
+    
+    **Pros:**
+    - Clear service boundaries
+    - Independent versioning
+    - Smaller, focused repositories
+    
+    **Cons:**
+    - Harder to share common setups
+    - Need to sync changes across repos
+  </Tab>
+</Tabs>
+
+## Code Review Checklist
+
+When reviewing Bruno collection pull requests:
+
+- [ ] Request URLs use environment variables (not hardcoded)
+- [ ] No secrets or sensitive data committed
+- [ ] Tests include proper assertions
+- [ ] Request names are descriptive
+- [ ] Folder organization is logical
+- [ ] Environment files follow naming conventions
+- [ ] Pre-request and post-response scripts are documented
+- [ ] Changes work with existing collection structure
+
+## Advanced: Git Hooks
+
+Automate checks with Git hooks:
+
+```bash .git/hooks/pre-commit
+#!/bin/bash
+# Pre-commit hook to check for secrets
+
+if git diff --cached --name-only | grep -E '\.bru$'; then
+  if git diff --cached | grep -iE 'password|secret|api[_-]?key' | grep -v '{{'; then
+    echo "Error: Potential secret found in .bru file!"
+    echo "Make sure to use environment variables for secrets."
+    exit 1
+  fi
+fi
+
+exit 0
+```
+
+Make it executable:
+
+```bash
+chmod +x .git/hooks/pre-commit
+```
+
+## Integration with Code
+
+Store Bruno collections alongside your application code:
+
+```
+my-app/
+├── src/
+├── tests/
+├── bruno-collections/     # API tests
+│   ├── bruno.json
+│   └── api/
+├── package.json
+└── README.md
+```
+
+Add npm scripts:
+
+```json package.json
+{
+  "scripts": {
+    "test:api": "cd bruno-collections && bru run --env Development",
+    "test:api:prod": "cd bruno-collections && bru run --env Production"
+  }
+}
+```
+
+## Why Bruno Works Better with Git
+
+<CardGroup cols={2}>
+  <Card title="Plain Text Format" icon="file-code">
+    `.bru` files are human-readable text files, perfect for diff tools and merge operations.
+  </Card>
+  
+  <Card title="File-per-Request" icon="file">
+    Each request is its own file, preventing merge conflicts when multiple people work on different endpoints.
+  </Card>
+  
+  <Card title="No Binary Exports" icon="ban">
+    Unlike Postman exports, everything is editable text that works seamlessly with Git.
+  </Card>
+  
+  <Card title="Offline-First" icon="network-wired">
+    No cloud sync means full control over your version history through Git.
+  </Card>
+</CardGroup>
+
+<Tip>
+  **Pro tip:** Use Bruno's Golden Edition for end-to-end encrypted cloud storage while still maintaining full Git workflow compatibility.
+</Tip>
